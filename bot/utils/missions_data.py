@@ -1,0 +1,1 @@
+missions: dict[int, dict] = {}
