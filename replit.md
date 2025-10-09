@@ -40,6 +40,7 @@ The bot requires the following environment variables to be set:
 - `ROLE_LSPD_ID` - LSPD role ID
 - `IDENT_CHANNEL_ID` - Identification channel ID
 - `ROLE_IDENTIFIE_ID` - Identified role ID
+- `VERIFROLE_CHANNEL_ID` - Role verification channel ID
 
 ## Features
 1. **Identification System**: Users can identify themselves via button clicks
@@ -50,9 +51,13 @@ The bot requires the following environment variables to be set:
 ## Setup Status
 - ✅ Python 3.11 installed
 - ✅ Dependencies installed (discord.py, python-dotenv)
-- ⏳ Awaiting Discord bot credentials from user
-- ⏳ Workflow configuration pending
+- ✅ All Discord bot credentials configured
+- ✅ Workflow configured and running
+- ✅ Bot successfully connected to Discord
 
 ## Recent Changes
 - 2025-10-09: Initial Replit environment setup
 - 2025-10-09: Installed Python 3.11 and all dependencies
+- 2025-10-09: Added missing VERIFROLE_CHANNEL_ID configuration
+- 2025-10-09: Created missing DemandeAgentsModal class for mission requests
+- 2025-10-09: Bot successfully running and connected to Discord server
