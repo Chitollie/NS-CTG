@@ -16,6 +16,7 @@ ROLE_SAMS_ID = get_env_int("ROLE_SAMS_ID")
 ROLE_LSPD_ID = get_env_int("ROLE_LSPD_ID")
 IDENT_CHANNEL_ID = get_env_int("IDENT_CHANNEL_ID")
 ROLE_IDENTIFIE_ID = get_env_int("ROLE_IDENTIFIE_ID")
+VERIFROLE_CHANNEL_ID = get_env_int("VERIFROLE_CHANNEL_ID")
 
 TOKEN = os.getenv("TOKEN")
 if TOKEN is None:
