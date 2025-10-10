@@ -29,6 +29,7 @@ bot/
 ## Dependencies
 - discord.py==2.4.0 - Discord API wrapper
 - python-dotenv==1.0.1 - Environment variable management
+- flask - Web server for health check/uptime monitoring
 
 ## Required Environment Variables
 The bot requires the following environment variables to be set:
@@ -55,9 +56,16 @@ The bot requires the following environment variables to be set:
 - ✅ Workflow configured and running
 - ✅ Bot successfully connected to Discord
 
+## Uptime Monitoring
+The bot includes a health check web server for use with UptimeRobot or similar services:
+- Health check URL: `https://[your-repl-domain].replit.dev` or `/health` endpoint
+- Runs on port 5000 alongside the Discord bot
+- Returns status: "✅ Discord Bot is running!"
+
 ## Recent Changes
 - 2025-10-09: Initial Replit environment setup
 - 2025-10-09: Installed Python 3.11 and all dependencies
 - 2025-10-09: Added missing VERIFROLE_CHANNEL_ID configuration
 - 2025-10-09: Created missing DemandeAgentsModal class for mission requests
 - 2025-10-09: Bot successfully running and connected to Discord server
+- 2025-10-10: Added Flask health check web server for UptimeRobot integration
