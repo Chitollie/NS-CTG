@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 # --- Charger le token depuis le .env ---
 load_dotenv()
-TOKEN = os.getenv("DISCORD_TOKEN")
+TOKEN = os.getenv("TOKEN")
 
 # --- Configuration ---
 WELCOME_CHANNEL_ID = 1424405724884369600
@@ -33,7 +33,7 @@ async def on_member_join(member):
         return
 
     embed = discord.Embed(
-        title="🎉 Bienvenue sur Diamond City !",
+        title="🎉 Bienvenue sur Nova Security !",
         description=(
             f"Bienvenue à toi {member.mention} 💜\n\n"
             f"Nous sommes ravis de t'accueillir parmi nous !\n"
