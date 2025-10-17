@@ -5,7 +5,7 @@ from .modals import DemandeAgentsModal
 class MenuSelect(Select):
     def __init__(self):
         options = [
-            discord.SelectOption(label="Demande d'agents", description="Faire une demande de personnel"),
+            discord.SelectOption(label="Demande d'agents", description="Faire une demande de personnel (via le salon dédié)"),
             discord.SelectOption(label="Infos sur nos services", description="Voir les services proposés"),
             discord.SelectOption(label="Contacter un consultant", description="Être mis en relation"),
         ]
@@ -13,7 +13,9 @@ class MenuSelect(Select):
 
     async def callback(self, interaction: discord.Interaction):
         if self.values[0] == "Demande d'agents":
-            await interaction.response.send_modal(DemandeAgentsModal())
+            await interaction.response.send_message(
+                "📢 Pour faire une demande d'agents, rends-toi dans le salon dédié ou utilise le bouton présent dans le salon de demandes.", ephemeral=True
+            )
         elif self.values[0] == "Infos sur nos services":
             await interaction.response.send_message(
                 "ℹ️ Nos services incluent la sécurité événementielle, la protection rapprochée et plus.", ephemeral=True

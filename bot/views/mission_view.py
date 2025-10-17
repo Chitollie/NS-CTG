@@ -15,6 +15,9 @@ class MissionValidationView(View):
 
     @button(label="Oui, je serai présent", style=discord.ButtonStyle.primary)
     async def oui_agent(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.message is None:
+            await interaction.response.send_message("Erreur interne (message introuvable).", ephemeral=True)
+            return
         mission_msg_id = interaction.message.id
         if mission_msg_id in missions:
             missions[mission_msg_id]["agents_confirmed"][interaction.user.id] = True
@@ -22,6 +25,9 @@ class MissionValidationView(View):
 
     @button(label="Non, je ne pourrai pas", style=discord.ButtonStyle.secondary)
     async def non_agent(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.message is None:
+            await interaction.response.send_message("Erreur interne (message introuvable).", ephemeral=True)
+            return
         mission_msg_id = interaction.message.id
         if mission_msg_id in missions:
             missions[mission_msg_id]["agents_confirmed"][interaction.user.id] = False
@@ -36,13 +42,26 @@ class MissionValidationView(View):
         now = datetime.datetime.now()
 
         if now < reminder_time:
+            # wait until reminder time
             await discord.utils.sleep_until(reminder_time)
-            channel = bot.get_channel(int(mission["channel"]))
+            # mission["channel"] may be stored as str or int
+            channel_raw = mission.get("channel")
+            channel_id = None
+            if channel_raw is None:
+                channel_id = None
+            elif isinstance(channel_raw, int):
+                channel_id = channel_raw
+            else:
+                try:
+                    channel_id = int(str(channel_raw))
+                except (TypeError, ValueError):
+                    channel_id = None
+            channel = bot.get_channel(channel_id) if channel_id is not None else None
             if isinstance(channel, discord.TextChannel):
                 role = channel.guild.get_role(ROLE_AGENTS_ID)
-                mention = f"{role.mention}" if role else ""
+                mention = role.mention if role else ""
 
-                present = [f"<@{uid}>" for uid, ok in mission["agents_confirmed"].items() if ok]
+                present = [f"<@{uid}>" for uid, ok in mission.get("agents_confirmed", {}).items() if ok]
                 msg_text = f"⏰ Rappel : Mission pour **{mission['nom']}** dans **30 min** au {mission['lieu']}. {mention}\n"
                 if present:
                     msg_text += f"✅ Présents : {', '.join(present)}"
@@ -51,11 +70,23 @@ class MissionValidationView(View):
 
         if now < mission["date"]:
             await discord.utils.sleep_until(mission["date"])
-        nb_agents = mission["nb_agents"]
+
+        nb_agents = mission.get("nb_agents", 0)
         tarif = nb_agents * 15000
-        channel = bot.get_channel(mission["channel"])
+        channel_raw = mission.get("channel")
+        channel_id = None
+        if channel_raw is None:
+            channel_id = None
+        elif isinstance(channel_raw, int):
+            channel_id = channel_raw
+        else:
+            try:
+                channel_id = int(str(channel_raw))
+            except (TypeError, ValueError):
+                channel_id = None
+        channel = bot.get_channel(channel_id) if channel_id is not None else None
         if isinstance(channel, discord.TextChannel):
             await channel.send(
-                f"✅ Mission terminée pour {mission['nom']} ({mission['id']}).\nTarif dû : **{tarif:,} $**"
+                f"✅ Mission terminée pour {mission['nom']} ({mission.get('id')}).\nTarif dû : **{tarif:,} $**"
             )
         missions.pop(msg_id, None)

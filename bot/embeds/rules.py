@@ -17,8 +17,8 @@ async def on_ready():
     print(f"✅ Connecté en tant que {bot.user}")
 
     channel = bot.get_channel(CHANNEL_ID)
-    if channel is None:
-        print("⚠️ Salon introuvable, vérifie l’ID du salon.")
+    if channel is None or not isinstance(channel, discord.TextChannel):
+        print("⚠️ Salon introuvable ou type invalide, vérifie l’ID du salon.")
         return
 
     # --- Vérifie s'il existe déjà un embed avec ce titre ---
@@ -51,4 +51,8 @@ async def on_ready():
     await channel.send(embed=embed)
     print("📨 Embed du règlement envoyé avec succès !")
 
-bot.run(TOKEN)
+
+if __name__ == "__main__":
+    if TOKEN is None:
+        raise RuntimeError("TOKEN n'est pas défini dans le .env")
+    bot.run(TOKEN)

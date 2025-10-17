@@ -54,6 +54,10 @@ class ContactView(View):
         guild = interaction.guild
         user = interaction.user
 
+        if guild is None:
+            await interaction.response.send_message("Erreur : serveur introuvable.", ephemeral=True)
+            return
+
         category = discord.utils.get(guild.categories, id=TICKETS_CATEGORY_ID)
         if not category:
             category = await guild.create_category("tickets")
