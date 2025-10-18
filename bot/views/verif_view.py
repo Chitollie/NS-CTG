@@ -39,10 +39,12 @@ class VerificationRoleView(View):
             await interaction.response.send_message(
                 f"✅ Rôle {self.grade.upper()} attribué à {member.mention}.", ephemeral=True
             )
-            await interaction.message.edit(
-                content=f"✅ Demande approuvée pour {member.mention}",
-                view=None
-            )
+            # interaction.message may be None depending on how the view was sent
+            if interaction.message:
+                await interaction.message.edit(
+                    content=f"✅ Demande approuvée pour {member.mention}",
+                    view=None
+                )
         except discord.Forbidden:
             await interaction.response.send_message("❌ Permissions insuffisantes.", ephemeral=True)
         except discord.HTTPException:
@@ -51,4 +53,5 @@ class VerificationRoleView(View):
     @button(label="❌ Refuser", style=discord.ButtonStyle.danger)
     async def refuse(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_message("🚫 Demande refusée.", ephemeral=True)
-        await interaction.message.edit(content="🚫 Demande refusée.", view=None)
+        if interaction.message:
+            await interaction.message.edit(content="🚫 Demande refusée.", view=None)
