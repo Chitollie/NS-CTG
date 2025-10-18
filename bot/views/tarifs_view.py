@@ -4,9 +4,9 @@ import math
 
 class TarifsModal(Modal, title="Simulation de tarif"):
     duree_minutes = TextInput(label="Durée de la mission (minutes)", placeholder="Ex: 90")
-    nb_recrues = TextInput(label="Nombre de recrues (X)", placeholder="Ex: 4")
-    nb_agents = TextInput(label="Nombre d'agents confirmés (Y)", placeholder="Ex: 0")
-    nb_responsables = TextInput(label="Nombre de responsables (Z)", placeholder="Ex: 1")
+    nb_recrues = TextInput(label="Nombre de recrues", placeholder="Ex: 4")
+    nb_agents = TextInput(label="Nombre d'agents confirmés", placeholder="Ex: 0")
+    nb_responsables = TextInput(label="Nombre de responsables", placeholder="Ex: 1")
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
