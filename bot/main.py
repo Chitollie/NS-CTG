@@ -5,6 +5,7 @@ from bot.events import setup_events
 from bot.commands.menu import menu_cmd
 from bot.web_server import keep_alive
 from bot.commands.annonces import annonces_cmd
+import asyncio
 
 intents = discord.Intents.default()
 intents.members = True
@@ -19,8 +20,6 @@ async def setup_hook():
 
 
 keep_alive()
-
-import asyncio
 
 asyncio.run(setup())
 
