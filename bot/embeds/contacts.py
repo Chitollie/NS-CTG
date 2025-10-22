@@ -20,7 +20,7 @@ AGENTS = {
         "discord_id": 1263956791818195087
     }
 }
-TICKETS_CATEGORY_ID = 123456789012345678
+TICKETS_CATEGORY_ID = 1426797063164788808
 
 # === VIEW AVEC LES BOUTONS DE CONTACT ===
 class ContactView(View):
@@ -137,6 +137,47 @@ class MenuView(View):
 
 # === COMMANDE DISCORD POUR ENVOYER LE MENU ===
 async def setup(bot: commands.Bot):
-    @bot.command()
-    async def contact(ctx):
-        await ctx.send("📞 Choisis une personne à contacter :", view=MenuView())
+    try:
+        from bot import config
+    except Exception:
+        config = None
+
+    contact_channel_id = None
+    if config is not None:
+        contact_channel_id = getattr(config, "CONTACT_CHANNEL_ID", None)
+
+    async def send_contact_menu():
+        if contact_channel_id is None:
+            return
+        channel = bot.get_channel(contact_channel_id)
+        if channel is None:
+            # essaye de récupérer en fetch si le cache ne contient pas le channel
+            try:
+                channel = await bot.fetch_channel(contact_channel_id)
+            except Exception:
+                return
+
+        # Vérifie si le message existe déjà pour éviter les doublons
+        try:
+            async for message in channel.history(limit=100):
+                if message.author == bot.user and message.content and "Choisis une personne à contacter" in message.content:
+                    return
+        except Exception:
+            # si l'historique n'est pas accessible, on tente quand même d'envoyer
+            pass
+
+        try:
+            await channel.send("📞 Choisis une personne à contacter :", view=MenuView())
+        except Exception:
+            # permissions manquantes ou autre erreur : on ignore silencieusement
+            return
+
+    # Si le bot est déjà prêt, envoie tout de suite, sinon attache un listener au ready
+    if getattr(bot, "is_ready", lambda: True)():
+        # Some bot implementations mark is_ready differently; attempt to send anyway
+        bot.loop.create_task(send_contact_menu())
+    else:
+        @bot.event
+        async def on_ready():
+            # Envoi le message une seule fois
+            await send_contact_menu()

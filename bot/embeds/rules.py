@@ -1,24 +1,13 @@
 import discord
-import os
-from discord.ext import commands
-from dotenv import load_dotenv
 
-load_dotenv()
-TOKEN = os.getenv("TOKEN")
-
-# --- Configuration ---
-CHANNEL_ID = 1424405632001376378
+# --- Configuration (par défaut, changez l'ID ou appelez la fonction avec un channel spécifique) ---
+DEFAULT_CHANNEL_ID = 1424405632001376378
 MESSAGE_IDENTIFIER = "📜 Règlement du Serveur"
 
-bot = commands.Bot(command_prefix="!", intents=discord.Intents.default())
 
-@bot.event
-async def on_ready():
-    print(f"✅ Connecté en tant que {bot.user}")
-
-    channel = bot.get_channel(CHANNEL_ID)
+async def send_rules(bot: discord.Client, channel_id: int = DEFAULT_CHANNEL_ID):
+    channel = bot.get_channel(channel_id)
     if channel is None or not isinstance(channel, discord.TextChannel):
-        print("⚠️ Salon introuvable ou type invalide, vérifie l’ID du salon.")
         return
 
     # --- Vérifie s'il existe déjà un embed avec ce titre ---
@@ -26,7 +15,6 @@ async def on_ready():
         if message.author == bot.user and message.embeds:
             embed = message.embeds[0]
             if embed.title == MESSAGE_IDENTIFIER:
-                print("⚠️ Un règlement existe déjà, rien n’a été renvoyé.")
                 return
 
     # --- Crée l'embed ---
@@ -47,12 +35,4 @@ async def on_ready():
     embed.set_thumbnail(url="")
     embed.set_author(name="", icon_url="")
 
-    # --- Envoie le message ---
     await channel.send(embed=embed)
-    print("📨 Embed du règlement envoyé avec succès !")
-
-
-if __name__ == "__main__":
-    if TOKEN is None:
-        raise RuntimeError("TOKEN n'est pas défini dans le .env")
-    bot.run(TOKEN)

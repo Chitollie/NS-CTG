@@ -1,56 +1,42 @@
 import discord
-import os
 from discord.ext import commands
-from dotenv import load_dotenv
+from bot import config
 
-# --- Charger le token depuis le .env ---
-load_dotenv()
-TOKEN = os.getenv("TOKEN")
 
-if TOKEN is None:
-    raise RuntimeError("TOKEN n'est pas défini dans le .env")
+def setup_join(bot: commands.Bot):
+    """Register member join handlers on the provided bot instance.
 
-# --- Configuration ---
-WELCOME_CHANNEL_ID = 1424405724884369600
-CHANNEL_ID_IDENTITE = 1423426602485678155
+    This avoids running a separate bot instance and uses IDs from `bot.config`.
+    """
 
-# --- Intents ---
-intents = discord.Intents.default()
-intents.members = True
-intents.message_content = False
+    WELCOME_CHANNEL_ID = getattr(config, "JOIN_CHANNEL_ID", None)
+    CHANNEL_ID_IDENTITE = getattr(config, "IDENT_CHANNEL_ID", None)
 
-bot = commands.Bot(command_prefix="!", intents=intents)
+    @bot.event
+    async def on_member_join(member):
+        welcome_channel = bot.get_channel(WELCOME_CHANNEL_ID) if WELCOME_CHANNEL_ID else None
+        identite_channel = bot.get_channel(CHANNEL_ID_IDENTITE) if CHANNEL_ID_IDENTITE else None
 
-@bot.event
-async def on_ready():
-    print(f"✅ Connecté en tant que {bot.user}")
+        if not welcome_channel or not identite_channel:
+            print("⚠️ Impossible de trouver le salon de bienvenue ou d'identité.")
+            return
 
-@bot.event
-async def on_member_join(member):
-    """Envoie un embed de bienvenue à l'arrivée d'un nouveau membre."""
-    welcome_channel = bot.get_channel(WELCOME_CHANNEL_ID)
-    identite_channel = bot.get_channel(CHANNEL_ID_IDENTITE)
-
-    if not welcome_channel or not identite_channel:
-        print("⚠️ Impossible de trouver le salon de bienvenue ou d'identité.")
-        return
-
-    embed = discord.Embed(
-        title="🎉 Bienvenue sur Nova Security !",
-        description=(
-            f"Bienvenue à toi {member.mention} 💜\n\n"
-            f"Nous sommes ravis de t'accueillir parmi nous !\n"
+        embed = discord.Embed(
+            title="🎉 Bienvenue sur Nova Security !",
+            description=(
+                f"Bienvenue à toi {member.mention} 💜\n\n"
+                f"Nous sommes ravis de t'accueillir parmi nous !\n"
                 f"➡️ Pense à t'enregistrer dans {getattr(identite_channel, 'mention', '#salon-identite')} pour valider ton arrivée ✨"
-        ),
-        color=discord.Color.purple()
-    )
+            ),
+            color=discord.Color.purple()
+        )
 
-    embed.set_thumbnail(url=member.display_avatar.url)
-    embed.set_footer(text="Un nouveau citoyen vient d’arriver 🌆")
+        embed.set_thumbnail(url=member.display_avatar.url)
+        embed.set_footer(text="Un nouveau citoyen vient d’arriver 🌆")
 
-    # send only to text channels (safety for categories/forum/DMs)
-    if isinstance(welcome_channel, discord.TextChannel):
-        await welcome_channel.send(embed=embed)
-    print(f"👋 Nouveau membre détecté : {member.name}")
+        # send only to text channels (safety for categories/forum/DMs)
+        if isinstance(welcome_channel, discord.TextChannel):
+            await welcome_channel.send(embed=embed)
+        print(f"👋 Nouveau membre détecté : {member.name}")
 
-bot.run(TOKEN)
+    # nothing returned; caller should call setup_join(bot)
