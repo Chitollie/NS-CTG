@@ -135,41 +135,49 @@ class MenuView(View):
         self.add_item(MenuSelect())
 
 
-# === COMMANDE DISCORD POUR ENVOYER LE MENU ===
 async def setup(bot: commands.Bot):
     try:
         from bot import config
     except Exception:
         config = None
 
-    contact_channel_id = None
+    contacts_channel_id = None
     if config is not None:
-        contact_channel_id = getattr(config, "CONTACT_CHANNEL_ID", None)
+        contacts_channel_id = getattr(config, "CONTACTS_CHANNEL_ID", None)
 
     async def send_contact_menu():
-        if contact_channel_id is None:
+        if contacts_channel_id is None:
+            print("⚠️ CONTACTS_CHANNEL_ID n'est pas défini")
             return
-        channel = bot.get_channel(contact_channel_id)
+        channel = bot.get_channel(contacts_channel_id)
         if channel is None:
-            # essaye de récupérer en fetch si le cache ne contient pas le channel
             try:
-                channel = await bot.fetch_channel(contact_channel_id)
+                channel = await bot.fetch_channel(contacts_channel_id)
             except Exception:
+                print(f"⚠️ Impossible de trouver le channel {contacts_channel_id}")
                 return
+
+        # Vérifie que c'est un channel texte
+        if not isinstance(channel, discord.TextChannel):
+            print(f"⚠️ Le channel {contacts_channel_id} n'est pas un channel texte")
+            return
 
         # Vérifie si le message existe déjà pour éviter les doublons
         try:
             async for message in channel.history(limit=100):
                 if message.author == bot.user and message.content and "Choisis une personne à contacter" in message.content:
+                    print("ℹ️ Menu de contact déjà présent dans le channel")
                     return
-        except Exception:
+        except Exception as e:
+            print(f"⚠️ Erreur lors de la vérification de l'historique : {e}")
             # si l'historique n'est pas accessible, on tente quand même d'envoyer
             pass
 
         try:
             await channel.send("📞 Choisis une personne à contacter :", view=MenuView())
-        except Exception:
-            # permissions manquantes ou autre erreur : on ignore silencieusement
+            print("✅ Menu de contact envoyé avec succès")
+        except Exception as e:
+            print(f"⚠️ Impossible d'envoyer le menu : {e}")
             return
 
     # Si le bot est déjà prêt, envoie tout de suite, sinon attache un listener au ready

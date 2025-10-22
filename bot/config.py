@@ -23,9 +23,7 @@ ASKMISS_CHANNEL_ID = get_env_int("ASKMISS_CHANNEL_ID")
 LOC_CHANNEL_ID = get_env_int("LOC_CHANNEL_ID")
 ANNOUNCEMENT_CHANNEL_ID = get_env_int("ANNOUNCEMENT_CHANNEL_ID")
 TARIF_CHANNEL_ID = get_env_int("TARIF_CHANNEL_ID")
-# CONTACT_CHANNEL_ID is optional: set via env if present, otherwise None
-_contact_env = os.getenv("CONTACT_CHANNEL_ID")
-CONTACT_CHANNEL_ID = int(_contact_env) if _contact_env is not None else None
+CONTACTS_CHANNEL_ID = get_env_int("CONTACTS_CHANNEL_ID")
 JOIN_CHANNEL_ID = get_env_int("JOIN_CHANNEL_ID")
 
 TOKEN = os.getenv("TOKEN")

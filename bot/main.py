@@ -5,6 +5,7 @@ from bot.events import setup_events
 from bot.commands.menu import menu_cmd
 from bot.commands.annonces import annonces_cmd
 from bot.utils.join import setup_join
+from bot.embeds import contacts
 
 intents = discord.Intents.default()
 intents.members = True
@@ -18,6 +19,8 @@ async def setup_hook():
     await setup_events(bot)
     # Register member join handler to send welcome messages
     setup_join(bot)
+    # Load contacts extension to send menu view
+    await contacts.setup(bot)
 
 
 if TOKEN is None:
