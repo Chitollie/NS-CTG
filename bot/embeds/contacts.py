@@ -16,7 +16,7 @@ AGENTS = {
     },
     "Brice Roca": {
         "role": "Directeur",
-        "numero": "",
+        "numero": "59158-69882",
         "discord_id": 471721415574290432
     }
 }
