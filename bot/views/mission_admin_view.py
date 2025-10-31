@@ -273,18 +273,17 @@ class MissionEndingView(View):
             inline=False
         )
 
-        # Remove view buttons and add feedback view for client
+        # Remove view buttons
         client_id = int(self.mission_data["id"])
         await interaction.message.edit(
             embed=embed,
             view=None
         )
 
-        # Send cost and feedback request to client
+        # Send cost and feedback request to client (DM)
         try:
             client = await interaction.client.fetch_user(client_id)
             if client:
-                # Créer deux embeds distincts
                 cost_embed = discord.Embed(
                     title="🎯 Mission terminée",
                     description=(
@@ -294,28 +293,130 @@ class MissionEndingView(View):
                     ),
                     color=discord.Color.blue()
                 )
-                
-                feedback_embed = discord.Embed(
-                    title="⭐ Feedback",
-                    description=(
-                        "Merci de nous donner votre avis sur cette mission !\n\n"
-                        "• Cliquez sur les étoiles pour noter (1-5)\n"
-                        "• Utilisez le bouton commentaire pour laisser un message\n"
-                        "• N'oubliez pas de valider avec le bouton Envoyer"
-                    ),
-                    color=discord.Color.gold()
-                )
-               
                 await client.send(embed=cost_embed)
-                await client.send(
-                    embed=feedback_embed,
-                    view=MissionFeedbackView(self.mission_data, self.msg_id)
-                )
-        except:
-            pass
+                # Démarrer le process de feedback DM
+                await start_feedback_dm(client, self.mission_data, self.msg_id, interaction.client)
+        except Exception as e:
+            print(f"Error sending DM to client: {e}")
 
         # Clean up mission data
         missions.pop(self.msg_id, None)
+
+# --- Feedback DM system ---
+import asyncio
+feedback_states = {}  # user_id: FeedbackState
+
+class FeedbackState:
+    def __init__(self, user_id, mission_data, msg_id):
+        self.user_id = user_id
+        self.mission_data = mission_data
+        self.msg_id = msg_id
+        self.step = 0  # 0: intro, 1: note, 2: commentaire, 3: recap, 4: choix envoyer/modifier
+        self.note = None
+        self.comment = None
+
+async def start_feedback_dm(user, mission_data, msg_id, bot):
+    state = FeedbackState(user.id, mission_data, msg_id)
+    feedback_states[user.id] = state
+    # 1. Intro
+    intro_embed = discord.Embed(
+        title="⭐ Nous aimerions votre avis !",
+        description="Merci d'avoir fait appel à nous. Nous serions ravis d'avoir votre retour sur la mission."
+    )
+    await user.send(embed=intro_embed)
+    # 2. Demande de note
+    await send_note_request(user)
+
+async def send_note_request(user):
+    embed = discord.Embed(
+        title="⭐ Noter la mission",
+        description="Veuillez envoyer une note entre 1 et 5 (1=très mauvais, 5=excellent).\nSi vous ne souhaitez pas donner de retour, répondez 'non'."
+    )
+    await user.send(embed=embed)
+    feedback_states[user.id].step = 1
+
+async def send_comment_request(user):
+    embed = discord.Embed(
+        title="💬 Commentaire sur la mission",
+        description="Vous pouvez maintenant écrire un commentaire sur la mission.\nRépondez 'non' si vous ne souhaitez pas commenter."
+    )
+    await user.send(embed=embed)
+    feedback_states[user.id].step = 2
+
+async def send_recap(user):
+    state = feedback_states[user.id]
+    # Générer étoiles
+    stars = "".join(["⭐" if i < state.note else "☆" for i in range(5)]) if state.note else ""
+    embed = discord.Embed(
+        title="📝 Récapitulatif de votre feedback",
+        description=f"Note : {stars}\nCommentaire : {state.comment if state.comment else 'Aucun'}"
+    )
+    embed.set_footer(text="Répondez 'envoyer' pour transmettre votre feedback, ou 'modifier' pour le changer.")
+    await user.send(embed=embed)
+    state.step = 3
+
+async def send_modify_choice(user):
+    embed = discord.Embed(
+        title="✏️ Modifier votre feedback",
+        description="Que souhaitez-vous modifier ? Répondez 'note' ou 'commentaire'."
+    )
+    await user.send(embed=embed)
+    feedback_states[user.id].step = 4
+
+# --- Event handler to be added in your bot main file ---
+# Add this in your bot event loop (main.py or events.py)
+#
+# @bot.event
+# async def on_message(message):
+#     if message.author.bot:
+#         return
+#     if isinstance(message.channel, discord.DMChannel):
+#         state = feedback_states.get(message.author.id)
+#         if not state:
+#             return
+#         content = message.content.strip().lower()
+#         if state.step == 1:
+#             if content == "non":
+#                 await message.channel.send("Merci, aucun feedback n'a été transmis.")
+#                 feedback_states.pop(message.author.id, None)
+#                 return
+#             if content.isdigit() and 1 <= int(content) <= 5:
+#                 state.note = int(content)
+#                 await send_comment_request(message.author)
+#                 return
+#             await message.channel.send("Veuillez entrer un chiffre entre 1 et 5, ou 'non'.")
+#         elif state.step == 2:
+#             if content == "non":
+#                 state.comment = None
+#             else:
+#                 state.comment = message.content
+#             await send_recap(message.author)
+#         elif state.step == 3:
+#             if content == "envoyer":
+#                 # Envoi dans le salon admin
+#                 guild = bot.get_guild(VOTRE_GUILD_ID)
+#                 channel = guild.get_channel(MISSADMIN_CHANNEL_ID)
+#                 if channel:
+#                     stars = "".join(["⭐" if i < state.note else "☆" for i in range(5)])
+#                     embed = discord.Embed(
+#                         title=f"Feedback - {state.mission_data['nom']}",
+#                         color=discord.Color.green()
+#                     )
+#                     embed.add_field(name="Note", value=stars, inline=False)
+#                     embed.add_field(name="Commentaire", value=state.comment if state.comment else "Aucun", inline=False)
+#                     embed.set_footer(text=f"Client: <@{state.user_id}>")
+#                     await channel.send(embed=embed)
+#                 await message.channel.send("✅ Merci pour votre feedback !")
+#                 feedback_states.pop(message.author.id, None)
+#             elif content == "modifier":
+#                 await send_modify_choice(message.author)
+#         elif state.step == 4:
+#             if content == "note":
+#                 await send_note_request(message.author)
+#             elif content == "commentaire":
+#                 await send_comment_request(message.author)
+#             else:
+#                 await message.channel.send("Veuillez répondre par 'note' ou 'commentaire'.")
 
 class MissionFeedbackView(View):
     def __init__(self, mission_data: Dict[str, Any], msg_id: int):
