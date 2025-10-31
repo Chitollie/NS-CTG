@@ -305,8 +305,7 @@ class MissionEndingView(View):
                     ),
                     color=discord.Color.gold()
                 )
-                
-                # Envoyer les deux embeds séparément
+               
                 await client.send(embed=cost_embed)
                 await client.send(
                     embed=feedback_embed,
