@@ -11,7 +11,13 @@ async def send_tarifs(client: discord.Client):
         return
 
     channel = client.get_channel(TARIF_CHANNEL_ID)
+    if channel is None and TARIF_CHANNEL_ID:
+        try:
+            channel = await client.fetch_channel(TARIF_CHANNEL_ID)
+        except Exception:
+            channel = None
     if not channel or not isinstance(channel, discord.TextChannel):
+        print(f"⚠️ Salon des tarifs introuvable : {TARIF_CHANNEL_ID}")
         return
 
     embed = discord.Embed(

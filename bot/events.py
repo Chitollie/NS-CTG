@@ -26,8 +26,13 @@ async def setup_events(bot: commands.Bot):
             print(e)
 
         from .utils.auto_messages import clean_and_send
-        # Identification
+        # Identification (fallback to fetch if not in cache)
         channel = bot.get_channel(IDENT_CHANNEL_ID)
+        if channel is None and IDENT_CHANNEL_ID:
+            try:
+                channel = await bot.fetch_channel(IDENT_CHANNEL_ID)
+            except Exception:
+                channel = None
         if isinstance(channel, discord.TextChannel):
             await clean_and_send(
                 channel,
@@ -38,6 +43,11 @@ async def setup_events(bot: commands.Bot):
 
         # Demande d'agents
         ask_channel = bot.get_channel(ASKMISS_CHANNEL_ID)
+        if ask_channel is None and ASKMISS_CHANNEL_ID:
+            try:
+                ask_channel = await bot.fetch_channel(ASKMISS_CHANNEL_ID)
+            except Exception:
+                ask_channel = None
         if isinstance(ask_channel, discord.TextChannel):
             embed = discord.Embed(
                 title="📢 Demandes d'agents",
@@ -52,14 +62,16 @@ async def setup_events(bot: commands.Bot):
             )
 
         # Localisation
-        loc_channel = bot.get_channel(LOC_CHANNEL_ID)
-        if isinstance(loc_channel, discord.TextChannel):
-            import os
-            image_url = os.getenv("LOC_IMAGE_URL")
-            if image_url:
+        # Localisation (the helper will handle channel retrieval but we also ensure image exists)
+        import os
+        image_url = os.getenv("LOC_IMAGE_URL")
+        if image_url:
+            try:
                 await send_localisation_image(
                     bot, image_url, alt_text="Localisation de nos équipes"
                 )
+            except Exception as e:
+                print(f"⚠️ Erreur lors de l'envoi de la localisation : {e}")
 
         # 💰 Tarifs (embed de base envoyé dans le channel configuré)
         try:

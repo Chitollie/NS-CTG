@@ -11,7 +11,13 @@ async def send_localisation_image(bot: discord.Client, image_url: str, alt_text:
         return
 
     channel = bot.get_channel(LOC_CHANNEL_ID)
+    if channel is None and LOC_CHANNEL_ID:
+        try:
+            channel = await bot.fetch_channel(LOC_CHANNEL_ID)
+        except Exception:
+            channel = None
     if channel is None or not isinstance(channel, discord.TextChannel):
+        print(f"⚠️ Salon de localisation introuvable : {LOC_CHANNEL_ID}")
         return
 
     embed = discord.Embed(title=MESSAGE_IDENTIFIER, description=alt_text, color=discord.Color.blue())
