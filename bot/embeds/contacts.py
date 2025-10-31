@@ -179,12 +179,8 @@ async def setup(bot: commands.Bot):
         except Exception as e:
             print(f"⚠️ Erreur lors de l'envoi du menu : {e}")
 
-    # Si le bot est déjà prêt, envoie tout de suite, sinon attache un listener au ready
-    if getattr(bot, "is_ready", lambda: True)():
-        # Some bot implementations mark is_ready differently; attempt to send anyway
+    # Planifier l'envoi via la boucle (sûr depuis setup_hook)
+    try:
         bot.loop.create_task(send_contact_menu())
-    else:
-        @bot.event
-        async def on_ready():
-            # Envoi le message une seule fois
-            await send_contact_menu()
+    except Exception as e:
+        print(f"⚠️ Erreur lors de l'initialisation du menu de contact : {e}")

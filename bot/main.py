@@ -7,6 +7,8 @@ from bot.commands.annonces import annonces_cmd
 from bot.commands import admin
 from bot.utils.join import setup_join
 from bot.embeds import contacts
+from bot.views import identification_view, askmiss_view
+from bot.embeds import tarifs, localisation
 from bot import config
 
 intents = discord.Intents.default()
@@ -77,6 +79,12 @@ async def setup_hook():
     setup_join(bot)
     # Load contacts extension to send menu view
     await contacts.setup(bot)
+    # Initialise les autres embeds/menus (identification, demande d'agents)
+    await identification_view.setup(bot)
+    await askmiss_view.setup(bot)
+    # Initialise tarifs et localisation (si configurés)
+    await tarifs.setup(bot)
+    await localisation.setup(bot)
 
 
 @bot.event

@@ -39,3 +39,24 @@ async def send_tarifs(client: discord.Client):
 
     # Nettoie les anciens messages et envoie le nouveau
     await clean_and_send(channel, embed=embed, bot_filter=MESSAGE_IDENTIFIER)
+
+
+async def setup(bot: discord.Client):
+    """Planifie l'envoi de l'embed des tarifs dans le channel configuré.
+
+    Utilise la même logique que `contacts.setup` : fetch si nécessaire et planification
+    via `bot.loop.create_task` si le bot est déjà prêt.
+    """
+    tarif_channel_id = getattr(__import__('bot.config', fromlist=['TARIF_CHANNEL_ID']), 'TARIF_CHANNEL_ID', None)
+
+    async def send_task():
+        try:
+            await send_tarifs(bot)
+            print("✅ Embed des tarifs envoyé avec succès.")
+        except Exception as e:
+            print(f"⚠️ Erreur lors de l'envoi des tarifs : {e}")
+
+    try:
+        bot.loop.create_task(send_task())
+    except Exception as e:
+        print(f"⚠️ Erreur lors de l'initialisation des tarifs : {e}")

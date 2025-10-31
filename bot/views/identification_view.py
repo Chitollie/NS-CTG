@@ -1,4 +1,5 @@
 import discord
+from discord.ext import commands
 from discord.ui import View, button, Modal, TextInput
 from ..config import ROLE_IDENTIFIE_ID, VERIFROLE_CHANNEL_ID
 from .verif_view import VerificationRoleView
@@ -91,3 +92,45 @@ class IdentificationButtonView(View):
     @button(label="S'identifier", style=discord.ButtonStyle.primary, custom_id="ident_button")
     async def ident_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(IdentificationModal())
+
+
+async def setup(bot: commands.Bot):
+    """Envoie le message d'identification dans le channel configuré en utilisant clean_and_send.
+
+    Ce setup fait un fetch si nécessaire et planifie l'envoi si le bot n'est pas encore prêt.
+    """
+    try:
+        from .. import config
+        from ..utils.auto_messages import clean_and_send
+    except Exception as e:
+        print(f"⚠️ Erreur d'import dans identification.setup : {e}")
+        return
+
+    ident_channel_id = getattr(config, "IDENT_CHANNEL_ID", None)
+    if ident_channel_id is None:
+        print("⚠️ IDENT_CHANNEL_ID n'est pas défini")
+        return
+
+    async def send_ident():
+        channel = bot.get_channel(ident_channel_id)
+        if channel is None:
+            try:
+                channel = await bot.fetch_channel(ident_channel_id)
+            except Exception:
+                channel = None
+        if not channel or not isinstance(channel, discord.TextChannel):
+            print(f"⚠️ Salon d'identification introuvable : {ident_channel_id}")
+            return
+
+        await clean_and_send(
+            channel,
+            content="Clique sur le bouton pour t'identifier :",
+            view=IdentificationButtonView(),
+            bot_filter="Clique sur le bouton pour t'identifier"
+        )
+
+    # Planifier l'envoi via la boucle (sûr depuis setup_hook)
+    try:
+        bot.loop.create_task(send_ident())
+    except Exception as e:
+        print(f"⚠️ Erreur lors de l'initialisation du message d'identification : {e}")

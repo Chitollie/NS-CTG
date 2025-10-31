@@ -26,3 +26,22 @@ async def send_localisation_image(bot: discord.Client, image_url: str, alt_text:
     
     # Nettoie les anciens messages et envoie le nouveau
     await clean_and_send(channel, embed=embed, bot_filter=MESSAGE_IDENTIFIER)
+
+
+async def setup(bot: discord.Client):
+    """Planifie l'envoi de la localisation si `LOC_IMAGE_URL` est configuré."""
+    import os
+    image_url = os.getenv("LOC_IMAGE_URL")
+    if not image_url:
+        return
+
+    async def send_task():
+        try:
+            await send_localisation_image(bot, image_url)
+        except Exception as e:
+            print(f"⚠️ Erreur lors de l'envoi de la localisation : {e}")
+
+    try:
+        bot.loop.create_task(send_task())
+    except Exception as e:
+        print(f"⚠️ Erreur lors de l'initialisation de la localisation : {e}")

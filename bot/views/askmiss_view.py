@@ -1,4 +1,5 @@
 import discord
+from discord.ext import commands
 from discord.ui import View, button, Modal, TextInput
 import datetime
 
@@ -106,3 +107,50 @@ class AskMissView(View):
     @button(label="Faire une demande d'agents", style=discord.ButtonStyle.primary, custom_id="askmiss_button")
     async def askmiss_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.send_modal(DemandeAgentsModal())
+
+
+async def setup(bot: commands.Bot):
+    """Envoie le message de demande d'agents dans le channel configuré.
+
+    Utilise clean_and_send et effectue un fetch si nécessaire. Planifie l'envoi si le bot
+    n'est pas encore prêt.
+    """
+    try:
+        from .. import config
+        from ..utils.auto_messages import clean_and_send
+    except Exception as e:
+        print(f"⚠️ Erreur d'import dans askmiss.setup : {e}")
+        return
+
+    ask_channel_id = getattr(config, "ASKMISS_CHANNEL_ID", None)
+    if ask_channel_id is None:
+        print("⚠️ ASKMISS_CHANNEL_ID n'est pas défini")
+        return
+
+    async def send_ask():
+        channel = bot.get_channel(ask_channel_id)
+        if channel is None:
+            try:
+                channel = await bot.fetch_channel(ask_channel_id)
+            except Exception:
+                channel = None
+        if not channel or not isinstance(channel, discord.TextChannel):
+            print(f"⚠️ Salon de demande d'agents introuvable : {ask_channel_id}")
+            return
+
+        embed = discord.Embed(
+            title="📢 Demandes d'agents",
+            description="Clique sur le bouton ci-dessous pour demander une sécurisation.",
+            color=discord.Color.green(),
+        )
+        await clean_and_send(
+            channel,
+            embed=embed,
+            view=AskMissView(),
+            bot_filter="📢 Demandes d'agents"
+        )
+
+    try:
+        bot.loop.create_task(send_ask())
+    except Exception as e:
+        print(f"⚠️ Erreur lors de l'initialisation du message de demande d'agents : {e}")
