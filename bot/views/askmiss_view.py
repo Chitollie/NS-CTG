@@ -15,7 +15,7 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
     )
 
     async def on_submit(self, interaction: discord.Interaction):
-        # On va d'abord afficher le sélecteur de date
+        # On va d'abord afficher le sélecteur de date de début
         from .datetime_select import DateTimeSelectView
 
         try:
@@ -27,25 +27,36 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
             await interaction.response.send_message("❌ Le nombre d'agents doit être un nombre valide.", ephemeral=True)
             return
 
-        # Afficher le sélecteur de date
-        date_view = DateTimeSelectView()
+        # Sélection date/heure de début
+        date_view_start = DateTimeSelectView()
         await interaction.response.send_message(
-            "📅 Sélectionnez la date et l'heure de la mission :",
-            view=date_view,
+            "📅 Sélectionnez la date et l'heure de DÉBUT de la mission :",
+            view=date_view_start,
             ephemeral=True
         )
-        
-        # Attendre que l'utilisateur termine la sélection
-        await date_view.wait()
-        
-        # Récupérer la date sélectionnée
-        date_mission = getattr(interaction.client, "temp_storage", {}).get(interaction.user.id)
-        if not date_mission:
-            await interaction.followup.send("❌ Erreur lors de la sélection de la date.", ephemeral=True)
+        await date_view_start.wait()
+        date_debut = getattr(interaction.client, "temp_storage", {}).get(interaction.user.id)
+        if not date_debut:
+            await interaction.followup.send("❌ Erreur lors de la sélection de la date de début.", ephemeral=True)
+            return
+        if date_debut < datetime.datetime.now():
+            await interaction.followup.send("❌ La date de début doit être dans le futur.", ephemeral=True)
             return
 
-        if date_mission < datetime.datetime.now():
-            await interaction.followup.send("❌ La date de mission doit être dans le futur.", ephemeral=True)
+        # Sélection date/heure de fin
+        date_view_end = DateTimeSelectView()
+        await interaction.followup.send(
+            "📅 Sélectionnez la date et l'heure de FIN de la mission :",
+            view=date_view_end,
+            ephemeral=True
+        )
+        await date_view_end.wait()
+        date_fin = getattr(interaction.client, "temp_storage", {}).get(interaction.user.id)
+        if not date_fin:
+            await interaction.followup.send("❌ Erreur lors de la sélection de la date de fin.", ephemeral=True)
+            return
+        if date_fin <= date_debut:
+            await interaction.followup.send("❌ La date de fin doit être après la date de début.", ephemeral=True)
             return
 
         from ..utils.missions_data import missions
@@ -79,7 +90,8 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
             "id": str(interaction.user.id),
             "lieu": self.lieu.value,
             "nb_agents": nb_agents,
-            "date": date_mission,
+            "date_debut": date_debut,
+            "date_fin": date_fin,
             "channel": mission_channel.id,
             "agents_confirmed": {},
             "reminder_sent": False
@@ -93,7 +105,8 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
         )
         embed.add_field(name="Lieu", value=self.lieu.value, inline=False)
         embed.add_field(name="Agents requis", value=str(nb_agents), inline=True)
-        embed.add_field(name="Date et heure", value=date_mission.strftime("%d/%m/%Y à %H:%M"), inline=True)
+        embed.add_field(name="Début", value=date_debut.strftime("%d/%m/%Y à %H:%M"), inline=True)
+        embed.add_field(name="Fin", value=date_fin.strftime("%d/%m/%Y à %H:%M"), inline=True)
         if self.notes.value:
             embed.add_field(name="Notes", value=self.notes.value, inline=False)
 
@@ -112,7 +125,8 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
             admin_embed.add_field(name="Mission", value=self.nom_mission.value, inline=False)
             admin_embed.add_field(name="Lieu", value=self.lieu.value, inline=False)
             admin_embed.add_field(name="Agents requis", value=str(nb_agents), inline=True)
-            admin_embed.add_field(name="Date et heure", value=date_mission.strftime("%d/%m/%Y à %H:%M"), inline=True)
+            admin_embed.add_field(name="Début", value=date_debut.strftime("%d/%m/%Y à %H:%M"), inline=True)
+            admin_embed.add_field(name="Fin", value=date_fin.strftime("%d/%m/%Y à %H:%M"), inline=True)
             if self.notes.value:
                 admin_embed.add_field(name="Notes", value=self.notes.value, inline=False)
 
