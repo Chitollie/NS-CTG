@@ -13,6 +13,8 @@ def get_env_int(var_name: str) -> int:
 
 GUILD_ID = get_env_int("GUILD_ID")
 MISS_CHANNEL_ID = get_env_int("MISS_CHANNEL_ID")
+MISSADMIN_CHANNEL_ID = get_env_int("MISSADMIN_CHANNEL_ID")
+RADIO_CHANNEL_ID = get_env_int("RADIO_CHANNEL_ID")
 ROLE_AGENTS_ID = get_env_int("ROLE_AGENTS_ID")
 ROLE_SAMS_ID = get_env_int("ROLE_SAMS_ID")
 ROLE_LSPD_ID = get_env_int("ROLE_LSPD_ID")

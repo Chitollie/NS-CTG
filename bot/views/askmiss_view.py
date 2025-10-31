@@ -8,11 +8,6 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
     nom_mission = TextInput(label="Nom de la mission")
     lieu = TextInput(label="Lieu de la mission")
     nb_agents = TextInput(label="Nombre d'agents nécessaires", placeholder="Ex : 3")
-    date_heure = TextInput(
-        label="Date et heure de la mission",
-        placeholder="Format : JJ/MM/AAAA HH:MM",
-        style=discord.TextStyle.short
-    )
     notes = TextInput(
         label="Notes additionnelles (optionnel)",
         required=False,
@@ -20,14 +15,41 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
     )
 
     async def on_submit(self, interaction: discord.Interaction):
-        # Déferer la réponse immédiatement pour éviter le timeout si le traitement prend du temps
+        # On va d'abord afficher le sélecteur de date
+        from .datetime_select import DateTimeSelectView
+
         try:
-            await interaction.response.defer(ephemeral=True)
-        except Exception:
-            pass
+            nb_agents = int(self.nb_agents.value)
+            if nb_agents <= 0:
+                await interaction.response.send_message("❌ Le nombre d'agents doit être positif.", ephemeral=True)
+                return
+        except ValueError:
+            await interaction.response.send_message("❌ Le nombre d'agents doit être un nombre valide.", ephemeral=True)
+            return
+
+        # Afficher le sélecteur de date
+        date_view = DateTimeSelectView()
+        await interaction.response.send_message(
+            "📅 Sélectionnez la date et l'heure de la mission :",
+            view=date_view,
+            ephemeral=True
+        )
+        
+        # Attendre que l'utilisateur termine la sélection
+        await date_view.wait()
+        
+        # Récupérer la date sélectionnée
+        date_mission = getattr(interaction.client, "temp_storage", {}).get(interaction.user.id)
+        if not date_mission:
+            await interaction.followup.send("❌ Erreur lors de la sélection de la date.", ephemeral=True)
+            return
+
+        if date_mission < datetime.datetime.now():
+            await interaction.followup.send("❌ La date de mission doit être dans le futur.", ephemeral=True)
+            return
 
         from ..utils.missions_data import missions
-        from .mission_view import MissionValidationView
+        from .mission_admin_view import MissionParticipationView, MissionAdminView
 
         try:
             nb_agents = int(self.nb_agents.value)
@@ -38,18 +60,7 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
             await interaction.followup.send("❌ Le nombre d'agents doit être un nombre valide.", ephemeral=True)
             return
 
-        try:
-            date_mission = datetime.datetime.strptime(self.date_heure.value.strip(), "%d/%m/%Y %H:%M")
-        except ValueError:
-            await interaction.followup.send(
-                "❌ Format de date invalide. Utilise : JJ/MM/AAAA HH:MM (ex: 25/12/2024 14:30)",
-                ephemeral=True
-            )
-            return
-
-        if date_mission < datetime.datetime.now():
-            await interaction.followup.send("❌ La date de mission doit être dans le futur.", ephemeral=True)
-            return
+        # La vérification de la date a déjà été faite dans le sélecteur
 
         guild = interaction.guild
         if guild is None:
@@ -62,28 +73,8 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
             await interaction.followup.send("❌ Salon de missions introuvable.", ephemeral=True)
             return
 
-        embed = discord.Embed(
-            title=f"📋 Nouvelle mission : {self.nom_mission.value}",
-            description=f"Demande par {interaction.user.mention}",
-            color=discord.Color.blue()
-        )
-        embed.add_field(name="Lieu", value=self.lieu.value, inline=False)
-        embed.add_field(name="Agents requis", value=str(nb_agents), inline=True)
-        embed.add_field(name="Date et heure", value=self.date_heure.value, inline=True)
-        if self.notes.value:
-            embed.add_field(name="Notes", value=self.notes.value, inline=False)
-
-        view = MissionValidationView(
-            nom=self.nom_mission.value,
-            user_id=str(interaction.user.id),
-            lieu=self.lieu.value,
-            nb_agents=nb_agents,
-            date=date_mission
-        )
-
-        msg = await mission_channel.send(embed=embed, view=view)
-
-        missions[msg.id] = {
+        # Create mission data
+        mission_data = {
             "nom": self.nom_mission.value,
             "id": str(interaction.user.id),
             "lieu": self.lieu.value,
@@ -93,6 +84,42 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
             "agents_confirmed": {},
             "reminder_sent": False
         }
+
+        # Send initial mission message (pending validation)
+        embed = discord.Embed(
+            title=f"📋 Nouvelle mission : {self.nom_mission.value}",
+            description=f"Demande par {interaction.user.mention}\n\n⏳ *En cours de validation par un haut gradé*",
+            color=discord.Color.orange()
+        )
+        embed.add_field(name="Lieu", value=self.lieu.value, inline=False)
+        embed.add_field(name="Agents requis", value=str(nb_agents), inline=True)
+        embed.add_field(name="Date et heure", value=date_mission.strftime("%d/%m/%Y à %H:%M"), inline=True)
+        if self.notes.value:
+            embed.add_field(name="Notes", value=self.notes.value, inline=False)
+
+        msg = await mission_channel.send(embed=embed)
+        missions[msg.id] = mission_data
+
+        # Send validation request to admin channel
+        from ..config import MISSADMIN_CHANNEL_ID
+        admin_channel = guild.get_channel(MISSADMIN_CHANNEL_ID)
+        if isinstance(admin_channel, discord.TextChannel):
+            admin_embed = discord.Embed(
+                title="🔍 Nouvelle demande de mission à valider",
+                description=f"Demandeur : {interaction.user.mention}",
+                color=discord.Color.blue()
+            )
+            admin_embed.add_field(name="Mission", value=self.nom_mission.value, inline=False)
+            admin_embed.add_field(name="Lieu", value=self.lieu.value, inline=False)
+            admin_embed.add_field(name="Agents requis", value=str(nb_agents), inline=True)
+            admin_embed.add_field(name="Date et heure", value=date_mission.strftime("%d/%m/%Y à %H:%M"), inline=True)
+            if self.notes.value:
+                admin_embed.add_field(name="Notes", value=self.notes.value, inline=False)
+
+            await admin_channel.send(
+                embed=admin_embed,
+                view=MissionAdminView(mission_data, msg.id)
+            )
 
         await interaction.followup.send(
             f"✅ Ta demande de mission a été envoyée dans {mission_channel.mention}.",
