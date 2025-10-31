@@ -48,7 +48,8 @@ async def setup_hook():
                     continue
 
             if isinstance(channel, discord.TextChannel):
-                bot_member = bot.user
+                # Utiliser le Member du bot dans le guild pour vérifier les permissions
+                bot_member = getattr(channel.guild, 'me', None)
                 perms = channel.permissions_for(bot_member) if bot_member else None
                 missing = []
                 if perms is not None:
