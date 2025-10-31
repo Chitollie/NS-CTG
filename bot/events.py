@@ -25,31 +25,31 @@ async def setup_events(bot: commands.Bot):
         except Exception as e:
             print(e)
 
+        from .utils.auto_messages import clean_and_send
         # Identification
         channel = bot.get_channel(IDENT_CHANNEL_ID)
         if isinstance(channel, discord.TextChannel):
-            async for msg in channel.history(limit=50):
-                if msg.author == bot.user and getattr(msg, "components", None):
-                    break
-            else:
-                await channel.send(
-                    "Clique sur le bouton pour t'identifier :",
-                    view=IdentificationButtonView()
-                )
+            await clean_and_send(
+                channel,
+                content="Clique sur le bouton pour t'identifier :",
+                view=IdentificationButtonView(),
+                bot_filter="Clique sur le bouton pour t'identifier"
+            )
 
         # Demande d'agents
         ask_channel = bot.get_channel(ASKMISS_CHANNEL_ID)
         if isinstance(ask_channel, discord.TextChannel):
-            async for msg in ask_channel.history(limit=50):
-                if msg.author == bot.user and getattr(msg, "components", None):
-                    break
-            else:
-                embed = discord.Embed(
-                    title="📢 Demandes d'agents",
-                    description="Clique sur le bouton ci-dessous pour demander une sécurisation.",
-                    color=discord.Color.green(),
-                )
-                await ask_channel.send(embed=embed, view=AskMissView())
+            embed = discord.Embed(
+                title="📢 Demandes d'agents",
+                description="Clique sur le bouton ci-dessous pour demander une sécurisation.",
+                color=discord.Color.green(),
+            )
+            await clean_and_send(
+                ask_channel,
+                embed=embed,
+                view=AskMissView(),
+                bot_filter="📢 Demandes d'agents"
+            )
 
         # Localisation
         loc_channel = bot.get_channel(LOC_CHANNEL_ID)

@@ -140,17 +140,17 @@ class MenuView(View):
 async def setup(bot: commands.Bot):
     try:
         from bot import config
-    except Exception:
-        config = None
+        from ..utils.auto_messages import clean_and_send
+    except Exception as e:
+        print(f"⚠️ Erreur d'import : {e}")
+        return
 
-    contacts_channel_id = None
-    if config is not None:
-        contacts_channel_id = getattr(config, "CONTACTS_CHANNEL_ID", None)
+    contacts_channel_id = getattr(config, "CONTACTS_CHANNEL_ID", None)
+    if contacts_channel_id is None:
+        print("⚠️ CONTACTS_CHANNEL_ID n'est pas défini")
+        return
 
     async def send_contact_menu():
-        if contacts_channel_id is None:
-            print("⚠️ CONTACTS_CHANNEL_ID n'est pas défini")
-            return
         channel = bot.get_channel(contacts_channel_id)
         if channel is None:
             try:
@@ -164,23 +164,20 @@ async def setup(bot: commands.Bot):
             print(f"⚠️ Le channel {contacts_channel_id} n'est pas un channel texte")
             return
 
-        # Vérifie si le message existe déjà pour éviter les doublons
+        # Nettoie et envoie le nouveau message
         try:
-            async for message in channel.history(limit=100):
-                if message.author == bot.user and message.content and "Choisis une personne à contacter" in message.content:
-                    print("ℹ️ Menu de contact déjà présent dans le channel")
-                    return
+            msg = await clean_and_send(
+                channel,
+                content="📞 Choisis une personne à contacter :",
+                view=MenuView(),
+                bot_filter="Choisis une personne à contacter"
+            )
+            if msg:
+                print("✅ Menu de contact envoyé avec succès")
+            else:
+                print("⚠️ Le message n'a pas pu être envoyé")
         except Exception as e:
-            print(f"⚠️ Erreur lors de la vérification de l'historique : {e}")
-            # si l'historique n'est pas accessible, on tente quand même d'envoyer
-            pass
-
-        try:
-            await channel.send("📞 Choisis une personne à contacter :", view=MenuView())
-            print("✅ Menu de contact envoyé avec succès")
-        except Exception as e:
-            print(f"⚠️ Impossible d'envoyer le menu : {e}")
-            return
+            print(f"⚠️ Erreur lors de l'envoi du menu : {e}")
 
     # Si le bot est déjà prêt, envoie tout de suite, sinon attache un listener au ready
     if getattr(bot, "is_ready", lambda: True)():

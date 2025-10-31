@@ -1,10 +1,21 @@
 import discord
 from ..config import TARIF_CHANNEL_ID
 
+MESSAGE_IDENTIFIER = "Nos Tarifs"
 
 async def send_tarifs(client: discord.Client):
+    try:
+        from ..utils.auto_messages import clean_and_send
+    except ImportError:
+        print("⚠️ Impossible d'importer clean_and_send")
+        return
+
+    channel = client.get_channel(TARIF_CHANNEL_ID)
+    if not channel or not isinstance(channel, discord.TextChannel):
+        return
+
     embed = discord.Embed(
-        title="Nos Tarifs",
+        title=MESSAGE_IDENTIFIER,
         description=
         "Voici un aperçu des tarifs de base. Utilisez la simulation pour obtenir une estimation précise.",
         color=discord.Color.gold())
@@ -20,14 +31,5 @@ async def send_tarifs(client: discord.Client):
                     inline=True)
     embed.set_footer(text="Simulation disponible via le /menu")
 
-    channel = client.get_channel(TARIF_CHANNEL_ID)
-    if not channel:
-        return
-
-    # Vérifie si un embed similaire a déjà été envoyé récemment
-    async for message in channel.history(limit=50):
-        if message.author == client.user and message.embeds:
-            if message.embeds[0].title == embed.title:
-                return
-
-    await channel.send(embed=embed)
+    # Nettoie les anciens messages et envoie le nouveau
+    await clean_and_send(channel, embed=embed, bot_filter=MESSAGE_IDENTIFIER)

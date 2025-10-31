@@ -32,7 +32,7 @@ def setup_join(bot: commands.Bot):
         )
 
         embed.set_thumbnail(url=member.display_avatar.url)
-        embed.set_footer(text="Un nouveau citoyen vient d’arriver 🌆")
+        embed.set_footer(text="Un nouveau citoyen vient d'arriver 🌆")
 
         # send only to text channels (safety for categories/forum/DMs)
         if isinstance(welcome_channel, discord.TextChannel):
