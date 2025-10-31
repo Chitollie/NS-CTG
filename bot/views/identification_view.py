@@ -15,9 +15,16 @@ class IdentificationModal(Modal, title="Identification"):
     )
 
     async def on_submit(self, interaction: discord.Interaction):
+        # Déferer la réponse immédiatement pour éviter le timeout de 3s si le traitement prend du temps
+        try:
+            await interaction.response.defer(ephemeral=True)
+        except Exception:
+            # Si defer échoue (très rare), on continue quand même
+            pass
+
         guild = interaction.guild
         if guild is None:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "Impossible de changer ton pseudo ici.", ephemeral=True)
             return
 
@@ -30,7 +37,7 @@ class IdentificationModal(Modal, title="Identification"):
             # On envoie la demande dans le salon de vérif
             verif_channel = guild.get_channel(VERIFROLE_CHANNEL_ID)
             if not isinstance(verif_channel, discord.TextChannel):
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     "⚠️ Salon de vérification introuvable.", ephemeral=True)
                 return
 
@@ -53,7 +60,7 @@ class IdentificationModal(Modal, title="Identification"):
                                         nick=new_nick)
 
             await verif_channel.send(embed=embed, view=view)
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "📨 Ta demande de rôle spécifique a été envoyée pour vérification.",
                 ephemeral=True)
 
@@ -65,16 +72,15 @@ class IdentificationModal(Modal, title="Identification"):
                     base_role = guild.get_role(ROLE_IDENTIFIE_ID)
                     if base_role:
                         await interaction.user.add_roles(base_role)
-
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     f"✅ Ton pseudo a été changé en **{new_nick}** et le rôle citoyen t’a été attribué.",
                     ephemeral=True)
             except discord.Forbidden:
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     "❌ Je n'ai pas la permission de changer ton pseudo ou d'ajouter le rôle.",
                     ephemeral=True)
             except discord.HTTPException:
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     "❌ Une erreur est survenue.", ephemeral=True)
 
 

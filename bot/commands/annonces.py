@@ -22,12 +22,13 @@ class AnnounceConfirmView(discord.ui.View):
 
     @discord.ui.button(label="Confirmer", style=discord.ButtonStyle.success)
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(ephemeral=True)
         if not self._is_author_or_admin(interaction):
-            await interaction.response.send_message("Tu n'as pas la permission de confirmer cette annonce.", ephemeral=True)
+            await interaction.followup.send("Tu n'as pas la permission de confirmer cette annonce.", ephemeral=True)
             return
         guild = interaction.guild
         if guild is None:
-            await interaction.response.edit_message(content="❌ Erreur : serveur introuvable.", view=None)
+            await interaction.message.edit(content="❌ Erreur : serveur introuvable.", view=None)
             return
         channel = guild.get_channel(ANNOUNCEMENT_CHANNEL_ID)
         if channel and isinstance(channel, discord.TextChannel):
@@ -43,10 +44,11 @@ class AnnounceConfirmView(discord.ui.View):
 
     @discord.ui.button(label="Annuler", style=discord.ButtonStyle.danger)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(ephemeral=True)
         if not self._is_author_or_admin(interaction):
-            await interaction.response.send_message("Tu n'as pas la permission d'annuler cette annonce.", ephemeral=True)
+            await interaction.followup.send("Tu n'as pas la permission d'annuler cette annonce.", ephemeral=True)
             return
-        await interaction.response.edit_message(content="❌ Envoi annulé.", view=None)
+        await interaction.message.edit(content="❌ Envoi annulé.", view=None)
         self.value = False
         self.stop()
 

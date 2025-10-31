@@ -15,23 +15,25 @@ class MissionValidationView(View):
 
     @button(label="Oui, je serai présent", style=discord.ButtonStyle.primary)
     async def oui_agent(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(ephemeral=True)
         if interaction.message is None:
-            await interaction.response.send_message("Erreur interne (message introuvable).", ephemeral=True)
+            await interaction.followup.send("Erreur interne (message introuvable).", ephemeral=True)
             return
         mission_msg_id = interaction.message.id
         if mission_msg_id in missions:
             missions[mission_msg_id]["agents_confirmed"][interaction.user.id] = True
-        await interaction.response.send_message("✅ Ta présence a été enregistrée.", ephemeral=True)
+        await interaction.followup.send("✅ Ta présence a été enregistrée.", ephemeral=True)
 
     @button(label="Non, je ne pourrai pas", style=discord.ButtonStyle.secondary)
     async def non_agent(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(ephemeral=True)
         if interaction.message is None:
-            await interaction.response.send_message("Erreur interne (message introuvable).", ephemeral=True)
+            await interaction.followup.send("Erreur interne (message introuvable).", ephemeral=True)
             return
         mission_msg_id = interaction.message.id
         if mission_msg_id in missions:
             missions[mission_msg_id]["agents_confirmed"][interaction.user.id] = False
-        await interaction.response.send_message("❌ Ta non-présence a été enregistrée.", ephemeral=True)
+        await interaction.followup.send("❌ Ta non-présence a été enregistrée.", ephemeral=True)
 
     async def handle_mission(self, msg_id: int, bot: discord.Client):
         mission = missions.get(msg_id)

@@ -11,14 +11,15 @@ class VerificationRoleView(View):
 
     @button(label="✅ Accepter", style=discord.ButtonStyle.success)
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer(ephemeral=True)
         guild = interaction.guild
         if guild is None:
-            await interaction.response.send_message("Erreur : pas de serveur trouvé.", ephemeral=True)
+            await interaction.followup.send("Erreur : pas de serveur trouvé.", ephemeral=True)
             return
 
         member = guild.get_member(self.user_id)
         if not member:
-            await interaction.response.send_message("⚠️ Membre introuvable.", ephemeral=True)
+            await interaction.followup.send("⚠️ Membre introuvable.", ephemeral=True)
             return
 
         try:
@@ -36,7 +37,7 @@ class VerificationRoleView(View):
             if specific_role:
                 await member.add_roles(specific_role)
 
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"✅ Rôle {self.grade.upper()} attribué à {member.mention}.", ephemeral=True
             )
             # interaction.message may be None depending on how the view was sent
@@ -46,12 +47,13 @@ class VerificationRoleView(View):
                     view=None
                 )
         except discord.Forbidden:
-            await interaction.response.send_message("❌ Permissions insuffisantes.", ephemeral=True)
+            await interaction.followup.send("❌ Permissions insuffisantes.", ephemeral=True)
         except discord.HTTPException:
-            await interaction.response.send_message("❌ Erreur lors de l’attribution du rôle.", ephemeral=True)
+            await interaction.followup.send("❌ Erreur lors de l'attribution du rôle.", ephemeral=True)
 
     @button(label="❌ Refuser", style=discord.ButtonStyle.danger)
     async def refuse(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_message("🚫 Demande refusée.", ephemeral=True)
+        await interaction.response.defer(ephemeral=True)
+        await interaction.followup.send("🚫 Demande refusée.", ephemeral=True)
         if interaction.message:
             await interaction.message.edit(content="🚫 Demande refusée.", view=None)

@@ -9,15 +9,15 @@ AGENTS = {
         "numero": "555-0234",
         "discord_id": 765306791093076058
     },
-    "Ace Morningstar": {
-        "role": "Co-PDG",
-        "numero": "555-0456",
-        "discord_id": 951822537363423262
-    },
     "Brian Stanford": {
-        "role": "Directeur / Formateur",
+        "role": "Co-PDG",
         "numero": "555-0987",
         "discord_id": 1263956791818195087
+    },
+    "Brice Roca": {
+        "role": "Directeur",
+        "numero": "",
+        "discord_id": 471721415574290432
     }
 }
 TICKETS_CATEGORY_ID = 1426797063164788808
@@ -42,8 +42,9 @@ class ContactView(View):
     # Bouton "Numéro"
     @discord.ui.button(label="📞 Numéro", style=discord.ButtonStyle.primary)
     async def numero(self, interaction: discord.Interaction, button: Button):
+        await interaction.response.defer(ephemeral=True)
         numero = self.agent_data.get("numero", "Non disponible")
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f"**Numéro de {self.agent_name} :** `{numero}`",
             ephemeral=True
         )
@@ -109,6 +110,7 @@ class MenuSelect(Select):
         super().__init__(placeholder="Choisis un agent à contacter...", options=options)
 
     async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer(ephemeral=True)
         agent_name = self.values[0]
         agent_data = AGENTS[agent_name]
 
@@ -121,7 +123,7 @@ class MenuSelect(Select):
         embed.add_field(name="Rôle", value=agent_data["role"], inline=False)
         embed.add_field(name="Numéro", value=f"`{agent_data['numero']}`", inline=False)
 
-        await interaction.response.send_message(
+        await interaction.followup.send(
             embed=embed,
             view=ContactView(agent_name),
             ephemeral=True

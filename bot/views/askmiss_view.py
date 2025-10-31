@@ -19,40 +19,46 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
     )
 
     async def on_submit(self, interaction: discord.Interaction):
+        # Déferer la réponse immédiatement pour éviter le timeout si le traitement prend du temps
+        try:
+            await interaction.response.defer(ephemeral=True)
+        except Exception:
+            pass
+
         from ..utils.missions_data import missions
         from .mission_view import MissionValidationView
 
         try:
             nb_agents = int(self.nb_agents.value)
             if nb_agents <= 0:
-                await interaction.response.send_message("❌ Le nombre d'agents doit être positif.", ephemeral=True)
+                await interaction.followup.send("❌ Le nombre d'agents doit être positif.", ephemeral=True)
                 return
         except ValueError:
-            await interaction.response.send_message("❌ Le nombre d'agents doit être un nombre valide.", ephemeral=True)
+            await interaction.followup.send("❌ Le nombre d'agents doit être un nombre valide.", ephemeral=True)
             return
 
         try:
             date_mission = datetime.datetime.strptime(self.date_heure.value.strip(), "%d/%m/%Y %H:%M")
         except ValueError:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "❌ Format de date invalide. Utilise : JJ/MM/AAAA HH:MM (ex: 25/12/2024 14:30)",
                 ephemeral=True
             )
             return
 
         if date_mission < datetime.datetime.now():
-            await interaction.response.send_message("❌ La date de mission doit être dans le futur.", ephemeral=True)
+            await interaction.followup.send("❌ La date de mission doit être dans le futur.", ephemeral=True)
             return
 
         guild = interaction.guild
         if guild is None:
-            await interaction.response.send_message("❌ Erreur : serveur introuvable.", ephemeral=True)
+            await interaction.followup.send("❌ Erreur : serveur introuvable.", ephemeral=True)
             return
 
         from ..config import MISS_CHANNEL_ID
         mission_channel = guild.get_channel(MISS_CHANNEL_ID)
         if not isinstance(mission_channel, discord.TextChannel):
-            await interaction.response.send_message("❌ Salon de missions introuvable.", ephemeral=True)
+            await interaction.followup.send("❌ Salon de missions introuvable.", ephemeral=True)
             return
 
         embed = discord.Embed(
@@ -87,7 +93,7 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
             "reminder_sent": False
         }
 
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f"✅ Ta demande de mission a été envoyée dans {mission_channel.mention}.",
             ephemeral=True
         )
