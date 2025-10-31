@@ -284,16 +284,30 @@ class MissionEndingView(View):
         try:
             client = await interaction.client.fetch_user(client_id)
             if client:
-                feedback_embed = discord.Embed(
+                # Créer deux embeds distincts
+                cost_embed = discord.Embed(
                     title="🎯 Mission terminée",
                     description=(
                         f"Votre mission **{self.mission_data['nom']}** est terminée.\n\n"
                         f"💰 **Montant à régler :** {total_cost:,} $\n"
-                        f"📱 **Numéro pour virement :** 555-0234\n\n"
-                        "Merci de nous donner votre feedback ci-dessous !"
+                        f"📱 **Numéro pour virement :** 555-0234"
                     ),
                     color=discord.Color.blue()
                 )
+                
+                feedback_embed = discord.Embed(
+                    title="⭐ Feedback",
+                    description=(
+                        "Merci de nous donner votre avis sur cette mission !\n\n"
+                        "• Cliquez sur les étoiles pour noter (1-5)\n"
+                        "• Utilisez le bouton commentaire pour laisser un message\n"
+                        "• N'oubliez pas de valider avec le bouton Envoyer"
+                    ),
+                    color=discord.Color.gold()
+                )
+                
+                # Envoyer les deux embeds séparément
+                await client.send(embed=cost_embed)
                 await client.send(
                     embed=feedback_embed,
                     view=MissionFeedbackView(self.mission_data, self.msg_id)
@@ -317,21 +331,28 @@ class MissionFeedbackView(View):
         # Remove old star buttons
         self.clear_items()
         
-        # Add new star buttons
+        # Create star row
+        star_row = []
         for i in range(1, 6):
             btn = discord.ui.Button(
-                label="★" if i <= self.rating else "☆",
+                emoji="⭐" if i <= self.rating else "✩",
                 custom_id=f"star_{i}",
-                style=discord.ButtonStyle.primary if i <= self.rating else discord.ButtonStyle.secondary
+                style=discord.ButtonStyle.primary if i <= self.rating else discord.ButtonStyle.secondary,
+                row=0
             )
             btn.callback = self.create_star_callback(i)
+            star_row.append(btn)
+            
+        # Add all star buttons on the same row
+        for btn in star_row:
             self.add_item(btn)
             
-        # Add feedback and submit buttons
+        # Add feedback button on second row
         feedback_btn = discord.ui.Button(
-            label="💬 Ajouter un commentaire",
+            label="� Ajouter un commentaire",
             custom_id="feedback",
-            style=discord.ButtonStyle.success
+            style=discord.ButtonStyle.success,
+            row=1
         )
         feedback_btn.callback = self.feedback_callback
         self.add_item(feedback_btn)
@@ -340,7 +361,8 @@ class MissionFeedbackView(View):
             submit_btn = discord.ui.Button(
                 label="✅ Envoyer le feedback",
                 custom_id="submit",
-                style=discord.ButtonStyle.primary
+                style=discord.ButtonStyle.primary,
+                row=1
             )
             submit_btn.callback = self.submit_callback
             self.add_item(submit_btn)
@@ -401,9 +423,13 @@ class MissionFeedbackView(View):
                 await admin_channel.send(embed=embed)
         
         # Update message
+        completion_embed = discord.Embed(
+            title="✨ Feedback envoyé",
+            description="Merci d'avoir pris le temps de nous donner votre avis !\nAu plaisir de vous revoir pour une prochaine mission.",
+            color=discord.Color.green()
+        )
         await interaction.message.edit(
-            content="✅ Merci pour votre feedback!",
-            embed=None,
+            embed=completion_embed,
             view=None
         )
 
