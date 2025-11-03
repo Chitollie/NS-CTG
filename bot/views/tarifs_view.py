@@ -22,7 +22,7 @@ class TarifsModal(Modal, title="Simulation de tarif"):
         t = max(1, math.ceil(minutes / 30))
 
         # Paramètres tarifaires (par tranche de 30 minutes)
-        base = 50000  # frais fixes
+        base = 20000  # frais fixes
         rate_min = 10000  # tarif basse (recrue)
         rate_max = 15000  # tarif haute (responsable)
 
