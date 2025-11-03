@@ -14,18 +14,38 @@ from bot import config
 
 intents = discord.Intents.default()
 intents.members = True
+intents.message_content = True 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-# Handler déplacé ici après la définition de bot
+
 @bot.event
 async def on_message(message):
     if message.author.bot:
         return
-    if isinstance(message.channel, discord.DMChannel):
-        state = feedback_states.get(message.author.id)
-        if not state:
-            return
-        content = message.content.strip().lower()
+
+    try:
+        await bot.process_commands(message)
+    except Exception:
+        pass
+
+    if not isinstance(message.channel, discord.DMChannel):
+        return
+
+    from bot.views.mission_admin_view import (
+        feedback_states,
+        send_comment_request,
+        send_recap,
+        send_modify_choice,
+        send_note_request,
+    )
+    from bot.config import MISSADMIN_CHANNEL_ID
+
+    state = feedback_states.get(message.author.id)
+    if not state:
+        return
+
+    content = message.content.strip().lower()
+    try:
         if state.step == 1:
             if content == "non":
                 await message.channel.send("Merci, aucun feedback n'a été transmis.")
@@ -44,19 +64,19 @@ async def on_message(message):
             await send_recap(message.author)
         elif state.step == 3:
             if content == "envoyer":
-                # Envoi dans le salon admin
-                guild = bot.get_guild(config.GUILD_ID)
-                channel = guild.get_channel(config.MISSADMIN_CHANNEL_ID)
-                if channel:
-                    stars = "".join(["⭐" if i < state.note else "☆" for i in range(5)])
-                    embed = discord.Embed(
-                        title=f"Feedback - {state.mission_data['nom']}",
-                        color=discord.Color.green()
-                    )
-                    embed.add_field(name="Note", value=stars, inline=False)
-                    embed.add_field(name="Commentaire", value=state.comment if state.comment else "Aucun", inline=False)
-                    embed.set_footer(text=f"Client: <@{state.user_id}>")
-                    await channel.send(embed=embed)
+                guild = bot.get_guild(GUILD_ID)
+                if guild:
+                    channel = guild.get_channel(MISSADMIN_CHANNEL_ID)
+                    if channel:
+                        stars = "".join(["⭐" if i < state.note else "☆" for i in range(5)])
+                        embed = discord.Embed(
+                            title=f"Feedback - {state.mission_data['nom']}",
+                            color=discord.Color.green()
+                        )
+                        embed.add_field(name="Note", value=stars, inline=False)
+                        embed.add_field(name="Commentaire", value=state.comment if state.comment else "Aucun", inline=False)
+                        embed.set_footer(text=f"Client: <@{state.user_id}>")
+                        await channel.send(embed=embed)
                 await message.channel.send("✅ Merci pour votre feedback !")
                 feedback_states.pop(message.author.id, None)
             elif content == "modifier":
@@ -68,20 +88,14 @@ async def on_message(message):
                 await send_comment_request(message.author)
             else:
                 await message.channel.send("Veuillez répondre par 'note' ou 'commentaire'.")
-from bot.embeds import tarifs, localisation
-from bot import config
-
-intents = discord.Intents.default()
-intents.members = True
-bot = commands.Bot(command_prefix="!", intents=intents)
-
+    except Exception as e:
+        print(f"Error handling DM feedback message: {e}")
 
 @bot.event
 async def setup_hook():
     bot.tree.add_command(menu_cmd, guild=discord.Object(id=GUILD_ID))
     bot.tree.add_command(annonces_cmd, guild=discord.Object(id=GUILD_ID))
 
-    # --- Diagnostic startup: affiche les IDs chargés et vérifie l'accès aux channels ---
     try:
         ids_to_check = [
             "IDENT_CHANNEL_ID",
@@ -99,7 +113,6 @@ async def setup_hook():
             print(f" - {name} = {value}")
             if not value:
                 continue
-            # Essayer d'obtenir depuis le cache, puis via l'API
             channel = bot.get_channel(value)
             if channel is None:
                 try:
@@ -110,7 +123,6 @@ async def setup_hook():
                     continue
 
             if isinstance(channel, discord.TextChannel):
-                # Utiliser le Member du bot dans le guild pour vérifier les permissions
                 bot_member = getattr(channel.guild, 'me', None)
                 perms = channel.permissions_for(bot_member) if bot_member else None
                 missing = []
@@ -130,7 +142,6 @@ async def setup_hook():
     except Exception as e:
         print(f"⚠️ Erreur lors du diagnostic de démarrage : {e}")
 
-    # Continue setup normal
     await setup_events(bot)
     # Register admin commands (including shutdown)
     # Note: admin.setup is a regular function (attaches signal handlers and commands)
@@ -156,7 +167,6 @@ async def on_disconnect():
 async def on_shutdown():
     """Appelé juste avant l'arrêt du bot."""
     print("🔌 Arrêt propre du bot en cours...")
-    # Sauvegarder ici les données importantes si nécessaire
 
 
 if TOKEN is None:

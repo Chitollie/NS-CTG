@@ -42,6 +42,19 @@ async def clean_and_send(
         bot_filter: Texte à rechercher dans les anciens messages pour les identifier
                    Si None, supprime tous les messages du bot
     """
+    # Déterminer l'ID du bot de façon robuste
+    bot_id = None
+    try:
+        if channel.guild and channel.guild.me:
+            bot_id = channel.guild.me.id
+        else:
+            # fallback vers l'objet user conservé dans l'état interne
+            bot_id = getattr(getattr(channel, "_state", None), "user", None)
+            if hasattr(bot_id, "id"):
+                bot_id = bot_id.id
+    except Exception:
+        bot_id = None
+
     # Tentative 1: suppression ciblée à partir du dernier message connu (stocké)
     store = _load_store()
     last_id = store.get(str(channel.id))
@@ -51,7 +64,7 @@ async def clean_and_send(
                 prev = await channel.fetch_message(int(last_id))
             except Exception:
                 prev = None
-            if prev and prev.author == channel.guild.me:
+            if prev and bot_id and getattr(prev.author, "id", None) == bot_id:
                 try:
                     await prev.delete()
                 except discord.Forbidden:
@@ -65,7 +78,7 @@ async def clean_and_send(
     # Tentative 2: suppression par lecture d'historique si disponible
     try:
         async for message in channel.history(limit=100):
-            if message.author == channel.guild.me:  # Si c'est un message du bot
+            if bot_id and getattr(message.author, "id", None) == bot_id:
                 if bot_filter is None or (message.content and bot_filter in message.content):
                     try:
                         await message.delete()
@@ -88,10 +101,10 @@ async def clean_and_send(
     try:
         if any([content, embed, view]):
             msg = await channel.send(content=content, embed=embed, view=view)
-            # Enregistrer l'ID du message envoyé pour futur nettoyage ciblé
+            # Enregistrer l'ID du message envoyé pour futur nettoyage ciblé (stocké en string)
             try:
                 store = _load_store()
-                store[str(channel.id)] = msg.id
+                store[str(channel.id)] = str(msg.id)
                 _save_store(store)
             except Exception:
                 pass
