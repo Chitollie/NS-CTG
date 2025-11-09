@@ -6,12 +6,12 @@ from discord.ui import View, Select, Button
 AGENTS = {
     "Alina Wolf": {
         "role": "PDG",
-        "numero": "555-0234",
+        "numero": "59669-70941",
         "discord_id": 765306791093076058
     },
     "Brian Stanford": {
         "role": "Co-PDG",
-        "numero": "555-0987",
+        "numero": "59783-70510",
         "discord_id": 1263956791818195087
     },
     "Brice Roca": {
