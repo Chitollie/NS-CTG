@@ -7,7 +7,7 @@ import datetime
 
 
 class IdentificationModal(Modal, title="Identification"):
-    nom_prenom = TextInput(label="Nom / Prénom", placeholder="Ex : Jean Dupont")
+    nom_prenom = TextInput(label="Prénom / Nom", placeholder="Ex : Jean Dupont")
     user_id = TextInput(label="ID", placeholder="Ex : 59669")
     grade_specifique = TextInput(
         label="Grade spécifique (optionnel)",
