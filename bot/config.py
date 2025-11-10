@@ -27,6 +27,9 @@ ANNOUNCEMENT_CHANNEL_ID = get_env_int("ANNOUNCEMENT_CHANNEL_ID")
 TARIF_CHANNEL_ID = get_env_int("TARIF_CHANNEL_ID")
 CONTACTS_CHANNEL_ID = get_env_int("CONTACTS_CHANNEL_ID")
 JOIN_CHANNEL_ID = get_env_int("JOIN_CHANNEL_ID")
+GRADE_DR = get_env_int("GRADE_DR")
+GRADE_AGTCONF = get_env_int("GRADE_AGTCONF")
+GRADE_RCR = get_env_int("GRADE_RCR")
 
 TOKEN = os.getenv("TOKEN")
 if TOKEN is None:

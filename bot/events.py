@@ -13,6 +13,13 @@ from bot.views.askmiss_view import AskMissView
 from bot.embeds.localisation import send_localisation_image
 from bot.embeds.tarifs import send_tarifs
 from bot.views.tarifs_view import TarifsModal
+from bot.views.missions_admin_view import (
+    feedback_states,
+    send_note_request,
+    send_comment_request,
+    send_recap,
+    send_modify_choice,
+)
 
 # Dictionnaire des états de feedback
 feedback_states = {}
