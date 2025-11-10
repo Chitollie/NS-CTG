@@ -136,7 +136,7 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
             )
 
         await interaction.followup.send(
-            f"✅ Ta demande de mission a été envoyée dans {mission_channel.mention}.",
+            f"✅ Ta demande de mission a été envoyée",
             ephemeral=True
         )
 

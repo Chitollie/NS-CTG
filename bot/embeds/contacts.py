@@ -89,7 +89,7 @@ class ContactView(View):
             description=(
                 f"Salut {user.mention} ! 👋\n"
                 f"Tu contactes **{self.agent_name}**, {self.agent_data['role']}.\n"
-                "Explique ta demande ici, un membre de l’équipe te répondra dès que possible 💬"
+                "Explique ta demande ici, on te répondra dès que possible 💬"
             ),
             color=discord.Color.purple()
         )
@@ -121,7 +121,7 @@ class MenuSelect(Select):
             color=discord.Color.purple()
         )
         embed.add_field(name="Rôle", value=agent_data["role"], inline=False)
-        embed.add_field(name="Numéro", value=f"`{agent_data['numero']}`", inline=False)
+        #embed.add_field(name="Numéro", value=f"`{agent_data['numero']}`", inline=False)
 
         await interaction.followup.send(
             embed=embed,
