@@ -1,6 +1,6 @@
 import discord
 
-# --- Configuration (par défaut, changez l'ID ou appelez la fonction avec un channel spécifique) ---
+
 DEFAULT_CHANNEL_ID = 1424405632001376378
 MESSAGE_IDENTIFIER = "📜 Règlement du Serveur"
 
@@ -21,7 +21,7 @@ async def send_rules(bot: discord.Client, channel_id: int = DEFAULT_CHANNEL_ID):
     embed = discord.Embed(
         title=MESSAGE_IDENTIFIER,
         description=(
-            "Bienvenue sur le serveur ! Merci de lire attentivement ce règlement 💜\n\n"
+            "Bienvenue sur le serveur ! Merci de lire attentivement ce règlement\n\n"
             "1️⃣ **Respect** – Aucune insulte, moquerie ou comportement toxique.\n"
             "2️⃣ **Spam** – Évitez les messages inutiles, le flood ou les majuscules excessives.\n"
             "3️⃣ **Contenu** – Pas de contenu NSFW, raciste, homophobe ou offensant.\n"
@@ -31,7 +31,7 @@ async def send_rules(bot: discord.Client, channel_id: int = DEFAULT_CHANNEL_ID):
         ),
         color=discord.Color.purple()
     )
-    embed.set_footer(text="Merci de respecter ces règles ❤️")
+    embed.set_footer(text="Merci de respecter ces règles.")
     embed.set_thumbnail(url="")
     embed.set_author(name="", icon_url="")
 
