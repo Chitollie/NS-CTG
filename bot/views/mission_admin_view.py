@@ -1,7 +1,7 @@
 import discord
 from discord.ui import View, button, Modal, TextInput
 import random
-import os  # accès au .env
+import os
 import asyncio
 from typing import Optional, Dict, Any
 from ..config import ROLE_AGENTS_ID, MISS_CHANNEL_ID, MISSADMIN_CHANNEL_ID

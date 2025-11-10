@@ -7,7 +7,7 @@ AGENTS = {
     "Alina Wolf": {
         "role": "PDG",
         "numero": "59669-70941",
-        "discord_id": 765306791093076058
+        "discord_id": 725425681177247908
     },
     "Brian Stanford": {
         "role": "Co-PDG",
