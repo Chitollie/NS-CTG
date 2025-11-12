@@ -23,6 +23,7 @@ def _save_store(d: dict):
     except Exception:
         pass
 
+
 async def clean_and_send(
     channel: discord.TextChannel,
     content: Optional[str] = None,
@@ -32,88 +33,26 @@ async def clean_and_send(
     bot_filter: str = None
 ) -> Optional[discord.Message]:
     """
-    Nettoie les anciens messages du bot dans le canal et envoie un nouveau message.
-    
-    Args:
-        channel: Le canal où nettoyer/envoyer
-        content: Le contenu du message à envoyer (optionnel)
-        embed: L'embed à envoyer (optionnel)
-        view: La vue à attacher (optionnel)
-        bot_filter: Texte à rechercher dans les anciens messages pour les identifier
-                   Si None, supprime tous les messages du bot
+    Met à jour le dernier message envoyé par le bot dans le canal s’il existe,
+    sinon envoie un nouveau message.
     """
-    # Déterminer l'ID du bot de façon robuste
     bot_id = None
     try:
         if channel.guild and channel.guild.me:
             bot_id = channel.guild.me.id
         else:
-            # fallback vers l'objet user conservé dans l'état interne
             bot_id = getattr(getattr(channel, "_state", None), "user", None)
             if hasattr(bot_id, "id"):
                 bot_id = bot_id.id
     except Exception:
         bot_id = None
 
-    # Tentative 1: suppression ciblée à partir du dernier message connu (stocké)
     store = _load_store()
     last_id = store.get(str(channel.id))
+    msg = None
+
+    # Essayer de récupérer et modifier le message précédent
     if last_id:
         try:
-            try:
-                prev = await channel.fetch_message(int(last_id))
-            except Exception:
-                prev = None
-            if prev and bot_id and getattr(prev.author, "id", None) == bot_id:
-                try:
-                    await prev.delete()
-                except discord.Forbidden:
-                    print(f"⚠️ Impossible de supprimer le message {last_id} dans {channel.name} (permission manquante). Continuer sans nettoyage.")
-                except discord.HTTPException:
-                    pass
-        except Exception:
-            # Ne pas bloquer l'envoi si fetch/delete échoue
-            pass
-
-    # Tentative 2: suppression par lecture d'historique si disponible
-    try:
-        async for message in channel.history(limit=100):
-            if bot_id and getattr(message.author, "id", None) == bot_id:
-                if bot_filter is None or (message.content and bot_filter in message.content):
-                    try:
-                        await message.delete()
-                    except discord.Forbidden:
-                        # Pas la permission de supprimer ; on arrête la boucle de suppression
-                        print(f"⚠️ Impossible de supprimer les messages dans {channel.name} (permission manquante). Continuer sans nettoyage.")
-                        break
-                    except discord.HTTPException:
-                        # Erreur lors de la suppression d'un message individuel, on continue
-                        continue
-    except discord.Forbidden:
-        # Pas la permission de lire l'historique — on loggue et on continue pour envoyer le message
-        print(f"⚠️ Impossible de lire l'historique du canal {channel.name} (permission manquante). Envoi sans nettoyage.")
-    except discord.HTTPException as e:
-        print(f"❌ Erreur HTTP lors de la lecture de l'historique du canal {channel.name}: {e}")
-    except Exception as e:
-        print(f"❌ Erreur inattendue lors de la lecture de l'historique du canal {channel.name}: {e}")
-
-    # Tenter d'envoyer le message même si le nettoyage a échoué
-    try:
-        if any([content, embed, view]):
-            msg = await channel.send(content=content, embed=embed, view=view)
-            # Enregistrer l'ID du message envoyé pour futur nettoyage ciblé (stocké en string)
-            try:
-                store = _load_store()
-                store[str(channel.id)] = str(msg.id)
-                _save_store(store)
-            except Exception:
-                pass
-            return msg
-    except discord.Forbidden:
-        print(f"❌ Permissions manquantes pour envoyer un message dans le canal {channel.name}")
-    except discord.HTTPException as e:
-        print(f"❌ Erreur HTTP lors de l'envoi dans le canal {channel.name}: {e}")
-    except Exception as e:
-        print(f"❌ Erreur inattendue lors de l'envoi dans le canal {channel.name}: {e}")
-
-    return None
+            prev = await channel.fetch_message(int(last_id))
+            if prev and getattr(prev
