@@ -9,12 +9,10 @@ import logging
 
 from bot.config import (
     CONTACTS_CHANNEL_ID,
-    # Optionnels (si présents dans ton config)
-    # TICKETS_CATEGORY_ID: catégorie où creer les tickets
-    # CONTRACTS_DATA_CHANNEL_ID: channel pour stocker les contrats
-    # FORUM_CHANNEL_ID: channel forum pour créer un post/thread
-    # GRADE_DR: liste d'IDs (ints) des membres de la direction
-    # Note: adapte si tes noms sont différents
+    TICKETS_CATEGORY_ID,
+    CONTRACTS_DATA_CHANNEL_ID,
+    FORUM_CHANNEL_ID,
+    GRADE_DR,
 )
 try:
     from bot.config import TICKETS_CATEGORY_ID, CONTRACTS_DATA_CHANNEL_ID, FORUM_CHANNEL_ID, GRADE_DR
@@ -616,21 +614,8 @@ async def deploy_partnership_menu(bot: discord.Client):
 # ------------------------------
 # Integration note:
 # ------------------------------
-# Ce module expose :
-# - PartnershipSelectView (si tu veux le réutiliser)
-# - deploy_partnership_menu(bot) -> à appeler depuis ton setup (ex: on_ready)
-# - handle_button_interaction(interaction) -> à appeler depuis ton event global d'interaction.
-#
-# Exemple d'intégration dans events.py:
 # 1) lors de on_ready(): await deploy_partnership_menu(bot)
 # 2) dans ton listener d'interactions (ou on_interaction) :
 #    @bot.event
 #    async def on_interaction(interaction):
 #        await handle_button_interaction(interaction)
-#
-# Notes & limites:
-# - Certains comportements (ouvrir un modal à un utilisateur arbitraire via DM) ne sont pas directement possibles ;
-#   j'ai prévu des fallback (DM d'instruction pour le PDG, ou possibilité pour la direction de "remplir pour le PDG").
-# - GRADE_DR doit être une liste d'IDs d'utilisateurs (ints) pour vérifier qui peut accepter/refuser. Si tu préfères utiliser
-#   une ROLE_DIRECTION_ID (role) je peux adapter pour utiliser les rôles (me le dire).
-# - Le stockage est en mémoire : si tu veux persistance, je peux te brancher un stockage simple (JSON, SQLite).
