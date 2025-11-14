@@ -19,7 +19,10 @@ def _load_store() -> dict:
 
 def _save_store(d: dict):
     try:
-        STORAGE_PATH.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+        STORAGE_PATH.write_text(
+            json.dumps(d, ensure_ascii=False, indent=2),
+            encoding="utf-8"
+        )
     except Exception:
         pass
 
@@ -32,10 +35,13 @@ async def clean_and_send(
     view: Optional[discord.ui.View] = None,
     bot_filter: str = None
 ) -> Optional[discord.Message]:
+
     """
     Met à jour le dernier message envoyé par le bot dans le canal s’il existe,
     sinon envoie un nouveau message.
     """
+
+    # Récupération de l'ID du bot
     bot_id = None
     try:
         if channel.guild and channel.guild.me:
@@ -51,8 +57,35 @@ async def clean_and_send(
     last_id = store.get(str(channel.id))
     msg = None
 
-    # Essayer de récupérer et modifier le message précédent
+    # Essayer d'éditer le message précédent
     if last_id:
         try:
             prev = await channel.fetch_message(int(last_id))
-            if prev and getattr(prev
+            if prev and getattr(prev.author, "id", None) == bot_id:
+                # EDIT du message si possible
+                await prev.edit(content=content, embed=embed, view=view)
+                msg = prev
+        except discord.NotFound:
+            pass
+        except discord.Forbidden:
+            print(f"⚠️ Pas les permissions pour modifier le message {last_id} dans {channel.name}")
+        except discord.HTTPException:
+            pass
+
+    # Si aucun message n’a pu être édité → on en envoie un nouveau
+    if msg is None:
+        try:
+            msg = await channel.send(content=content, embed=embed, view=view)
+
+            # Enregistrer le nouveau message pour le prochain edit
+            store[str(channel.id)] = str(msg.id)
+            _save_store(store)
+
+        except discord.Forbidden:
+            print(f"❌ Permissions manquantes pour envoyer un message dans le canal {channel.name}")
+        except discord.HTTPException as e:
+            print(f"❌ Erreur HTTP lors de l’envoi dans le canal {channel.name}: {e}")
+        except Exception as e:
+            print(f"❌ Erreur inattendue lors de l’envoi dans le canal {channel.name}: {e}")
+
+    return msg
