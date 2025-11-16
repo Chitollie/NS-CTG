@@ -3,7 +3,6 @@ from typing import Optional
 import json
 from pathlib import Path
 
-# Emplacement du fichier de stockage des derniers messages envoyés par channel
 STORAGE_PATH = Path(__file__).resolve().parents[2] / "data" / "auto_messages.json"
 STORAGE_PATH.parent.mkdir(parents=True, exist_ok=True)
 
@@ -41,7 +40,6 @@ async def clean_and_send(
     sinon envoie un nouveau message.
     """
 
-    # Récupération de l'ID du bot
     bot_id = None
     try:
         if channel.guild and channel.guild.me:
@@ -57,12 +55,10 @@ async def clean_and_send(
     last_id = store.get(str(channel.id))
     msg = None
 
-    # Essayer d'éditer le message précédent
     if last_id:
         try:
             prev = await channel.fetch_message(int(last_id))
             if prev and getattr(prev.author, "id", None) == bot_id:
-                # EDIT du message si possible
                 await prev.edit(content=content, embed=embed, view=view)
                 msg = prev
         except discord.NotFound:
@@ -72,12 +68,10 @@ async def clean_and_send(
         except discord.HTTPException:
             pass
 
-    # Si aucun message n’a pu être édité → on en envoie un nouveau
     if msg is None:
         try:
             msg = await channel.send(content=content, embed=embed, view=view)
 
-            # Enregistrer le nouveau message pour le prochain edit
             store[str(channel.id)] = str(msg.id)
             _save_store(store)
 
