@@ -139,10 +139,10 @@ class PartnershipSelectView(View):
         await interaction.response.defer(ephemeral=True)
         choice = select.values[0]
 
-        # Option contact agent
         if choice == "contact_agent":
-            await contacts.send_contact_menu(interaction)  # Appelle la fonction de contacts.py
+            await contacts.send_contact_menu(interaction)
             return
+
 
         ticket_channel = await create_ticket_channel(interaction.guild, choice, interaction.user)
         if not ticket_channel:
@@ -156,7 +156,6 @@ class PartnershipSelectView(View):
             await ticket_channel.send(embed=embed)
             PARTNER_REQUESTS[ticket_channel.id] = {"requester_id": interaction.user.id, "subject": "Autres", "status": "open"}
         else:
-            # bouton pour ouvrir le modal partenariat
             view = View()
             btn = Button(label="Remplir la demande", style=discord.ButtonStyle.primary)
             async def btn_callback(interaction_: discord.Interaction):
@@ -194,7 +193,7 @@ async def deploy_partnership_menu(bot: commands.Bot):
         if not isinstance(channel, discord.TextChannel):
             logger.warning(f"Le channel {CONTACTS_CHANNEL_ID} n'est pas un TextChannel")
             return
-        embed = discord.Embed(title="Contact - Partenariats", description="Choisissez une option ci-dessous :", color=discord.Color.blurple())
+        embed = discord.Embed(title="Nous contacter", description="Choisissez une option ci-dessous :", color=discord.Color.blurple())
         view = PartnershipSelectView()
         await clean_and_send(channel, embed=embed, view=view)
         logger.info("✅ Menu de partenariats déployé.")
