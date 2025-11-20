@@ -279,7 +279,7 @@ async def create_partnership_ticket(bot: discord.Client, user: discord.User, for
         description=f"**Type :** {form_data['company_type']}",
         color=discord.Color.gold()
     )
-    embed.add_field(name="PDG", value=f"{form_data['first_name']} {form_data['last_name']} (<@{pdg_id_int>})", inline=False)
+    embed.add_field(name="PDG", value=f"{form_data['first_name']} {form_data['last_name']} (<@{pdg_id_int})", inline=False)
     embed.add_field(name="ID PDG", value=str(pdg_id_int), inline=True)
     embed.add_field(name="Entreprise", value=form_data["company_name"], inline=True)
     embed.set_footer(text=f"Demandé par {user} • ID {user.id}")
