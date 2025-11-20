@@ -6,8 +6,6 @@ import random
 import logging
 import os
 from dotenv import load_dotenv
-
-# Import seulement la fonction qu'on utilise
 from bot.commands.contacts import send_contact_menu
 
 load_dotenv()
