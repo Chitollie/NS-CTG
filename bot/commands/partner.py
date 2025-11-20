@@ -7,9 +7,9 @@ import random
 import logging
 
 # ---------------- CONFIG ----------------
-CONTACTS_CHANNEL_ID = 123456789012345678  # à remplacer par ton vrai ID
-TICKETS_CATEGORY_ID = 987654321098765432  # à remplacer par ton vrai ID
-GRADE_DR = []  # liste des IDs des membres qui peuvent voir tous les tickets
+CONTACTS_CHANNEL_ID = 123456789012345678
+TICKETS_CATEGORY_ID = 987654321098765432
+GRADE_DR = []
 
 logger = logging.getLogger("partner")
 logger.setLevel(logging.INFO)
