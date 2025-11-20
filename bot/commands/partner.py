@@ -1,4 +1,3 @@
-# bot/views/partnerships_view.py
 import discord
 from discord import app_commands
 from discord.ui import View, Select, Button, Modal, TextInput
@@ -400,7 +399,6 @@ async def handle_button_interaction(interaction: discord.Interaction):
             except Exception:
                 pass
 
-            # Send a message in the ticket channel with two buttons:
             # - "Envoyer questionnaire au PDG (DM)" (attempt to DM instructions)
             # - "Remplir pour PDG" (la direction remplit le questionnaire pour le PDG ici)
             ch = interaction.guild.get_channel(chan_id)
@@ -420,7 +418,6 @@ async def handle_button_interaction(interaction: discord.Interaction):
             await interaction.response.send_message("Erreur interne.", ephemeral=True)
 
     elif cid.startswith("dm_pdg_"):
-        # Try to DM the PDG with instructions (no modal available to send directly)
         try:
             _, chan_id_s = cid.split("_", 1)
             chan_id = int(chan_id_s)
@@ -433,8 +430,6 @@ async def handle_button_interaction(interaction: discord.Interaction):
             if not pdg_user:
                 await interaction.response.send_message("PDG introuvable (ID invalide).", ephemeral=True)
                 return
-            # DM with instructions and ask them to reply in DM following the format or click a link — since we can't open modals via DM easily here,
-            # we send the questionnaire fields and ask them to respond as a reply (the events on_message in your bot can capture their DM).
             q_msg = (
                 "Bonjour, merci d'avoir contacté notre direction.\n"
                 "Veuillez répondre à ce message en fournissant :\n"
@@ -452,21 +447,17 @@ async def handle_button_interaction(interaction: discord.Interaction):
             await interaction.response.send_message("Erreur lors de l'envoi du DM.", ephemeral=True)
 
     elif cid.startswith("fill_pdg_") or cid.startswith("fill_dir_"):
-        # Open the QuestionnaireModal for the interacting user (direction fills either for PDG or for itself)
         try:
             _, chan_id_s = cid.split("_", 1)
             chan_id = int(chan_id_s)
             modal = QuestionnaireModal(title="Questionnaire - Remplissez les champs")
             await interaction.response.send_modal(modal)
-            # after modal is submitted, we expect interaction.client._last_questionnaire to be set
-            # we wait a bit (modal handler sets it)
             await asyncio.sleep(0.2)
             last = getattr(interaction.client, "_last_questionnaire", None)
             if not last:
                 await interaction.followup.send("❌ Aucun résultat reçu du questionnaire.", ephemeral=True)
                 return
             _int, answers = last
-            # Determine whether this is direction or pdg entry
             request = PARTNER_REQUESTS.get(chan_id)
             if not request:
                 await interaction.followup.send("❌ Demande introuvable.", ephemeral=True)
@@ -474,7 +465,6 @@ async def handle_button_interaction(interaction: discord.Interaction):
             if cid.startswith("fill_pdg_"):
                 request["pdg_info"] = answers
                 await interaction.followup.send("✅ Questionnaire (PDG) enregistré.", ephemeral=True)
-                # Post PDG answers as embed in ticket
                 ch = interaction.guild.get_channel(chan_id)
                 if ch:
                     em = discord.Embed(title="Questionnaire - Réponses PDG", color=discord.Color.green())
@@ -485,7 +475,6 @@ async def handle_button_interaction(interaction: discord.Interaction):
                     em.add_field(name="Autre", value=answers.get("more","Aucun"), inline=False)
                     await ch.send(embed=em)
             else:
-                # direction filled
                 request["direction_info"] = answers
                 await interaction.followup.send("✅ Questionnaire (Direction) enregistré.", ephemeral=True)
                 ch = interaction.guild.get_channel(chan_id)
@@ -497,7 +486,6 @@ async def handle_button_interaction(interaction: discord.Interaction):
                     em.add_field(name="Attentes", value=answers.get("expectations","Aucun"), inline=False)
                     em.add_field(name="Autre", value=answers.get("more","Aucun"), inline=False)
                     await ch.send(embed=em)
-            # If both present, show sign buttons
             if request.get("pdg_info") and request.get("direction_info"):
                 sign_view = View()
                 btn_sign = Button(label="Signer", style=discord.ButtonStyle.success, custom_id=f"sign_{chan_id}")
@@ -527,23 +515,19 @@ async def handle_button_interaction(interaction: discord.Interaction):
 
             if action == "sign":
                 request["status"] = "signed"
-                # send DM recap to PDG and direction and save to CONTRACTS_DATA_CHANNEL_ID
                 pdg_id = request.get("pdg_id")
                 requester = request.get("requester_id")
-                # Build recap embed
                 em = discord.Embed(title=f"Contrat signé — {request.get('company_name')}", color=discord.Color.green())
                 em.add_field(name="Entreprise", value=request.get("company_name","N/A"), inline=False)
                 em.add_field(name="PDG", value=f"{request.get('pdg_display','N/A')} (<@{pdg_id}>)", inline=False)
                 em.add_field(name="PDG - Partie", value=str(request.get("pdg_info") or "N/A"), inline=False)
                 em.add_field(name="Notre partie", value=str(request.get("direction_info") or "N/A"), inline=False)
-                # DM PDG
                 try:
                     pdg_user = await interaction.client.fetch_user(pdg_id)
                     if pdg_user:
                         await pdg_user.send(embed=em)
                 except Exception:
                     pass
-                # Send to contracts data channel
                 if CONTRACTS_DATA_CHANNEL_ID:
                     try:
                         target = guild.get_channel(int(CONTRACTS_DATA_CHANNEL_ID))
@@ -551,12 +535,10 @@ async def handle_button_interaction(interaction: discord.Interaction):
                             await target.send(embed=em)
                     except Exception:
                         logger.exception("Erreur envoi contrat au channel de stockage")
-                # create forum post / thread if possible
                 if FORUM_CHANNEL_ID:
                     try:
                         forum = guild.get_channel(int(FORUM_CHANNEL_ID))
                         if isinstance(forum, discord.TextChannel):
-                            # create a thread in the forum channel with company name
                             thread = await forum.create_thread(name=request.get("company_name","partenariat"), message=None)
                             await thread.send(f"Présentation de {request.get('company_name')}\n{request.get('pdg_info',{}).get('presentation','')}\nLien: {request.get('pdg_info',{}).get('invite_link','')}")
                     except Exception:
@@ -564,7 +546,6 @@ async def handle_button_interaction(interaction: discord.Interaction):
                 await ch.send(embed=discord.Embed(title="Contrat signé ✓", description="Le contrat a été signé et les parties ont été notifiées.", color=discord.Color.green()))
                 await interaction.response.send_message("✅ Contrat signé.", ephemeral=True)
             else:
-                # cancel
                 request["status"] = "cancelled"
                 pdg_id = request.get("pdg_id")
                 try:
@@ -579,9 +560,7 @@ async def handle_button_interaction(interaction: discord.Interaction):
             logger.exception(f"Erreur sign/cancel: {e}")
             await interaction.response.send_message("Erreur interne.", ephemeral=True)
 
-# ------------------------------
-# Helper to deploy initial menu in CONTACTS_CHANNEL_ID
-# ------------------------------
+
 async def deploy_partnership_menu(bot: discord.Client):
     """Call this once on startup to post the main menu in CONTACTS_CHANNEL_ID (or re-post manually)."""
     try:
@@ -589,7 +568,7 @@ async def deploy_partnership_menu(bot: discord.Client):
         if not guilds:
             logger.warning("Bot not in any guilds.")
             return
-        # assume single guild / choose the guild that contains CONTACTS_CHANNEL_ID
+
         target_channel = None
         for g in guilds:
             ch = g.get_channel(int(CONTACTS_CHANNEL_ID))
@@ -610,12 +589,3 @@ async def deploy_partnership_menu(bot: discord.Client):
         logger.info("Menu de partenariats déployé.")
     except Exception:
         logger.exception("Erreur deploy_partnership_menu")
-
-# ------------------------------
-# Integration note:
-# ------------------------------
-# 1) lors de on_ready(): await deploy_partnership_menu(bot)
-# 2) dans ton listener d'interactions (ou on_interaction) :
-#    @bot.event
-#    async def on_interaction(interaction):
-#        await handle_button_interaction(interaction)

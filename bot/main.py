@@ -11,6 +11,7 @@ from bot.views import identification_view, askmiss_view
 from bot.views.mission_admin_view import feedback_states, send_note_request, send_comment_request, send_recap, send_modify_choice
 from bot.embeds import tarifs, localisation
 from bot import config
+from bot.commands.partner import deploy_partnership_menu, handle_button_interaction
 
 intents = discord.Intents.default()
 intents.members = True
@@ -143,21 +144,18 @@ async def setup_hook():
         print(f"⚠️ Erreur lors du diagnostic de démarrage : {e}")
 
     await setup_events(bot)
-    # Register admin commands (including shutdown)
-    # Note: admin.setup is a regular function (attaches signal handlers and commands)
     admin.setup(bot)
-    # Register member join handler to send welcome messages
     setup_join(bot)
-    # Load contacts extension to send menu view
     await contacts.setup(bot)
-    # Initialise les autres embeds/menus (identification, demande d'agents)
     await identification_view.setup(bot)
     await askmiss_view.setup(bot)
-    # Initialise tarifs et localisation (si configurés)
     await tarifs.setup(bot)
     await localisation.setup(bot)
+    await deploy_partnership_menu(bot)
 
-
+@bot.event
+async def on_interaction(interaction):
+    await handle_button_interaction(interaction)
 @bot.event
 async def on_disconnect():
     print("⚠️ Déconnecté de Discord. Tentative de reconnexion...")
