@@ -7,6 +7,9 @@ import logging
 import os
 from dotenv import load_dotenv
 
+# Import pour contacts
+from bot.commands import contacts
+
 load_dotenv()
 CONTACTS_CHANNEL_ID = int(os.getenv("CONTACTS_CHANNEL_ID", 0))
 TICKETS_CATEGORY_ID = int(os.getenv("TICKETS_CATEGORY_ID", 0))
@@ -17,7 +20,7 @@ logger.setLevel(logging.INFO)
 
 # ---------------- GLOBALS ----------------
 PARTNER_REQUESTS: Dict[int, Dict[str, Any]] = {}
-_last_contact_message: Dict[int, int] = {}
+_last_message: Dict[int, int] = {}
 
 # ---------------- HELPERS ----------------
 def _short_id() -> str:
@@ -46,7 +49,7 @@ async def create_ticket_channel(guild: discord.Guild, name: str, requester: disc
 
 async def clean_and_send(channel: discord.TextChannel, content: Optional[str] = None, *, embed: Optional[discord.Embed] = None, view: Optional[discord.ui.View] = None):
     msg = None
-    last_id = _last_contact_message.get(channel.id)
+    last_id = _last_message.get(channel.id)
     if last_id:
         try:
             prev = await channel.fetch_message(last_id)
@@ -57,7 +60,7 @@ async def clean_and_send(channel: discord.TextChannel, content: Optional[str] = 
     if msg is None:
         try:
             msg = await channel.send(content=content, embed=embed, view=view)
-            _last_contact_message[channel.id] = msg.id
+            _last_message[channel.id] = msg.id
         except Exception as e:
             logger.exception(f"Impossible d'envoyer le message dans le channel {channel.id}: {e}")
     return msg
@@ -121,6 +124,7 @@ class PartnershipSelectView(View):
         options = [
             discord.SelectOption(label="Demande de Partenariat", description="Remplir la demande de partenariat", value="partnership"),
             discord.SelectOption(label="Autres", description="Ouvrir un ticket simple", value="other"),
+            discord.SelectOption(label="Contacter un agent", description="Choisir un agent à contacter", value="contact_agent"),
         ]
         self.add_item(Select(
             placeholder="Que souhaitez-vous ?",
@@ -134,10 +138,17 @@ class PartnershipSelectView(View):
     async def select_callback(self, select: Select, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         choice = select.values[0]
+
+        # Option contact agent
+        if choice == "contact_agent":
+            await contacts.send_contact_menu(interaction)  # Appelle la fonction de contacts.py
+            return
+
         ticket_channel = await create_ticket_channel(interaction.guild, choice, interaction.user)
         if not ticket_channel:
             await interaction.followup.send("❌ Impossible de créer le ticket.", ephemeral=True)
             return
+
         await interaction.followup.send(f"✅ Ticket créé : {ticket_channel.mention}", ephemeral=True)
 
         if choice == "other":
@@ -145,7 +156,7 @@ class PartnershipSelectView(View):
             await ticket_channel.send(embed=embed)
             PARTNER_REQUESTS[ticket_channel.id] = {"requester_id": interaction.user.id, "subject": "Autres", "status": "open"}
         else:
-            # ajout d'un bouton pour ouvrir le modal
+            # bouton pour ouvrir le modal partenariat
             view = View()
             btn = Button(label="Remplir la demande", style=discord.ButtonStyle.primary)
             async def btn_callback(interaction_: discord.Interaction):

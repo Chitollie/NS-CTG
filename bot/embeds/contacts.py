@@ -29,7 +29,7 @@ class ContactView(View):
         self.agent_name = agent_name
         self.agent_data = AGENTS[agent_name]
 
-        # On ajoute le bouton Email comme lien direct vers le profil Discord
+        # Bouton Email comme lien direct vers le profil Discord
         discord_id = self.agent_data["discord_id"]
         self.add_item(
             Button(
@@ -39,7 +39,6 @@ class ContactView(View):
             )
         )
 
-    # Bouton "Numéro"
     @discord.ui.button(label="📞 Numéro", style=discord.ButtonStyle.primary)
     async def numero(self, interaction: discord.Interaction, button: Button):
         await interaction.response.defer(ephemeral=True)
@@ -49,7 +48,6 @@ class ContactView(View):
             ephemeral=True
         )
 
-    # Bouton "Ticket"
     @discord.ui.button(label="🎟️ Ticket", style=discord.ButtonStyle.success)
     async def ticket(self, interaction: discord.Interaction, button: Button):
         guild = interaction.guild
@@ -63,7 +61,6 @@ class ContactView(View):
         if not category:
             category = await guild.create_category("tickets")
 
-        # Vérifie si l’utilisateur a déjà un ticket ouvert
         existing_ticket = discord.utils.get(category.text_channels, name=f"ticket-{user.name.lower()}")
         if existing_ticket:
             await interaction.response.send_message(
@@ -72,7 +69,6 @@ class ContactView(View):
             )
             return
 
-        # Crée un nouveau salon
         overwrites = {
             guild.default_role: discord.PermissionOverwrite(view_channel=False),
             user: discord.PermissionOverwrite(view_channel=True, send_messages=True)
@@ -83,7 +79,6 @@ class ContactView(View):
             overwrites=overwrites
         )
 
-        # Embed d'accueil dans le ticket
         embed = discord.Embed(
             title=f"🎟️ Ticket Ouvert - {self.agent_name}",
             description=(
@@ -99,7 +94,6 @@ class ContactView(View):
             ephemeral=True
         )
 
-
 # === MENU PRINCIPAL ===
 class MenuSelect(Select):
     def __init__(self):
@@ -112,16 +106,13 @@ class MenuSelect(Select):
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
         agent_name = self.values[0]
-        agent_data = AGENTS[agent_name]
 
-        # Embed général de contact
         embed = discord.Embed(
             title=f"📇 Contact : {agent_name}",
             description="Choisis une option ci-dessous 👇",
             color=discord.Color.purple()
         )
-        embed.add_field(name="Rôle", value=agent_data["role"], inline=False)
-        #embed.add_field(name="Numéro", value=f"`{agent_data['numero']}`", inline=False)
+        embed.add_field(name="Rôle", value=AGENTS[agent_name]["role"], inline=False)
 
         await interaction.followup.send(
             embed=embed,
@@ -129,58 +120,22 @@ class MenuSelect(Select):
             ephemeral=True
         )
 
-
 # === VIEW PRINCIPALE ===
 class MenuView(View):
     def __init__(self):
         super().__init__(timeout=None)
         self.add_item(MenuSelect())
 
-
-async def setup(bot: commands.Bot):
+# === FONCTION PUBLIQUE POUR PARTNER.PY ===
+async def send_contact_menu(interaction: discord.Interaction):
+    """Envoie le menu de contact lorsqu'un utilisateur clique sur l'option 'Contacter un agent'."""
     try:
-        from bot import config
-        from ..utils.auto_messages import clean_and_send
+        embed = discord.Embed(
+            title="📞 Choisis une personne à contacter",
+            description="Sélectionne un agent ci-dessous 👇",
+            color=discord.Color.blurple()
+        )
+        await interaction.followup.send(embed=embed, view=MenuView(), ephemeral=True)
     except Exception as e:
-        print(f"⚠️ Erreur d'import : {e}")
-        return
-
-    contacts_channel_id = getattr(config, "CONTACTS_CHANNEL_ID", None)
-    if contacts_channel_id is None:
-        print("⚠️ CONTACTS_CHANNEL_ID n'est pas défini")
-        return
-
-    async def send_contact_menu():
-        channel = bot.get_channel(contacts_channel_id)
-        if channel is None:
-            try:
-                channel = await bot.fetch_channel(contacts_channel_id)
-            except Exception:
-                print(f"⚠️ Impossible de trouver le channel {contacts_channel_id}")
-                return
-
-        # Vérifie que c'est un channel texte
-        if not isinstance(channel, discord.TextChannel):
-            print(f"⚠️ Le channel {contacts_channel_id} n'est pas un channel texte")
-            return
-
-        # Nettoie et envoie le nouveau message
-        try:
-            msg = await clean_and_send(
-                channel,
-                content="📞 Choisis une personne à contacter :",
-                view=MenuView(),
-                bot_filter="Choisis une personne à contacter"
-            )
-            if msg:
-                print("✅ Menu de contact envoyé avec succès")
-            else:
-                print("⚠️ Le message n'a pas pu être envoyé")
-        except Exception as e:
-            print(f"⚠️ Erreur lors de l'envoi du menu : {e}")
-
-    # Planifier l'envoi via la boucle (sûr depuis setup_hook)
-    try:
-        bot.loop.create_task(send_contact_menu())
-    except Exception as e:
-        print(f"⚠️ Erreur lors de l'initialisation du menu de contact : {e}")
+        await interaction.followup.send("⚠️ Impossible d'afficher le menu de contact.", ephemeral=True)
+        print(f"Erreur send_contact_menu : {e}")
