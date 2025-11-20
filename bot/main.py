@@ -11,7 +11,7 @@ from bot.views import identification_view, askmiss_view
 from bot.views.mission_admin_view import feedback_states, send_note_request, send_comment_request, send_recap, send_modify_choice
 from bot.embeds import tarifs, localisation
 from bot import config
-from bot.commands.partner import deploy_partnership_menu,
+from bot.commands.partner import deploy_partnership_menu
 
 intents = discord.Intents.default()
 intents.members = True
