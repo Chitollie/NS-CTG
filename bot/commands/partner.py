@@ -7,8 +7,8 @@ import logging
 import os
 from dotenv import load_dotenv
 
-# Import pour contacts
-from bot.commands import contacts
+# Import seulement la fonction qu'on utilise
+from bot.commands.contacts import send_contact_menu
 
 load_dotenv()
 CONTACTS_CHANNEL_ID = int(os.getenv("CONTACTS_CHANNEL_ID", 0))
@@ -140,9 +140,8 @@ class PartnershipSelectView(View):
         choice = select.values[0]
 
         if choice == "contact_agent":
-            await contacts.send_contact_menu(interaction)
+            await send_contact_menu(interaction)
             return
-
 
         ticket_channel = await create_ticket_channel(interaction.guild, choice, interaction.user)
         if not ticket_channel:
