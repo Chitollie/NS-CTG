@@ -146,7 +146,6 @@ async def setup_hook():
     await setup_events(bot)
     admin.setup(bot)
     setup_join(bot)
-    await contacts.setup(bot)
     await identification_view.setup(bot)
     await askmiss_view.setup(bot)
     await tarifs.setup(bot)
