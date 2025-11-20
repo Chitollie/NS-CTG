@@ -154,9 +154,6 @@ async def setup_hook():
     await deploy_partnership_menu(bot)
 
 @bot.event
-async def on_interaction(interaction: discord.Interaction):
-
-@bot.event
 async def on_disconnect():
     print("⚠️ Déconnecté de Discord. Tentative de reconnexion...")
 
