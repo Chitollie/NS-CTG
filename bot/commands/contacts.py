@@ -42,7 +42,10 @@ class ContactView(View):
 
 class MenuSelect(Select):
     def __init__(self):
-        options = [discord.SelectOption(label=name, description=data["role"]) for name, data in AGENTS.items()]
+        options = [
+            discord.SelectOption(label=name, description=data["role"], value=name)
+            for name, data in AGENTS.items()
+        ]
         super().__init__(placeholder="Choisis un agent à contacter...", options=options)
 
     async def callback(self, interaction: discord.Interaction):
