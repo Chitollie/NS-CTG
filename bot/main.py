@@ -6,7 +6,7 @@ from bot.commands.menu import menu_cmd
 from bot.commands.annonces import annonces_cmd
 from bot.commands import admin
 from bot.utils.join import setup_join
-from bot.embeds import contacts
+from bot.commands import contacts
 from bot.views import identification_view, askmiss_view
 from bot.views.mission_admin_view import feedback_states, send_note_request, send_comment_request, send_recap, send_modify_choice
 from bot.embeds import tarifs, localisation
