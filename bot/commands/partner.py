@@ -1,22 +1,23 @@
 import discord
-from discord import app_commands
 from discord.ext import commands
 from discord.ui import View, Select, Button, Modal, TextInput
 from typing import Dict, Any, Optional
 import random
 import logging
+import os
+from dotenv import load_dotenv
 
-# ---------------- CONFIG ----------------
-CONTACTS_CHANNEL_ID = 123456789012345678
-TICKETS_CATEGORY_ID = 987654321098765432
-GRADE_DR = []
+load_dotenv()
+CONTACTS_CHANNEL_ID = int(os.getenv("CONTACTS_CHANNEL_ID", 0))
+TICKETS_CATEGORY_ID = int(os.getenv("TICKETS_CATEGORY_ID", 0))
+GRADE_DR = [int(x) for x in os.getenv("GRADE_DR", "").split(",") if x.strip().isdigit()]
 
 logger = logging.getLogger("partner")
 logger.setLevel(logging.INFO)
 
 # ---------------- GLOBALS ----------------
 PARTNER_REQUESTS: Dict[int, Dict[str, Any]] = {}
-_last_contact_message: Dict[int, int] = {}  # channel_id -> message_id
+_last_contact_message: Dict[int, int] = {}
 
 # ---------------- HELPERS ----------------
 def _short_id() -> str:
@@ -26,12 +27,12 @@ async def create_ticket_channel(guild: discord.Guild, name: str, requester: disc
     overwrites = {guild.default_role: discord.PermissionOverwrite(view_channel=False)}
     overwrites[requester] = discord.PermissionOverwrite(view_channel=True, send_messages=True, read_message_history=True)
     for did in GRADE_DR:
-        member = guild.get_member(int(did))
+        member = guild.get_member(did)
         if member:
             overwrites[member] = discord.PermissionOverwrite(view_channel=True, send_messages=True)
     category = None
     if TICKETS_CATEGORY_ID:
-        category = guild.get_channel(int(TICKETS_CATEGORY_ID))
+        category = guild.get_channel(TICKETS_CATEGORY_ID)
         if not isinstance(category, discord.CategoryChannel):
             category = None
     try:
