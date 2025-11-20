@@ -16,13 +16,11 @@ from bot.config import (
 try:
     from bot.config import TICKETS_CATEGORY_ID, CONTRACTS_DATA_CHANNEL_ID, FORUM_CHANNEL_ID, GRADE_DR
 except Exception:
-    # si manquent, on définit des fallback pour éviter les ImportError
     TICKETS_CATEGORY_ID = None
     CONTRACTS_DATA_CHANNEL_ID = None
     FORUM_CHANNEL_ID = None
-    # GRADE_DR doit exister normalement ; sinon on met vide
     try:
-        GRADE_DR  # type: ignore
+        GRADE_DR
     except NameError:
         GRADE_DR = []
 
@@ -46,7 +44,6 @@ async def clean_and_send(channel: discord.TextChannel, content: Optional[str] = 
             await prev.edit(content=content, embed=embed, view=view)
             msg = prev
         except Exception:
-            # si fetch/edit échoue, on continue pour envoyer un nouveau message
             pass
 
     if msg is None:
@@ -101,7 +98,6 @@ class PartnershipModal(Modal):
             "company_name": self.company_name.value.strip(),
             "company_type": self.company_type.value.strip(),
         }
-
 
         interaction.client._last_partnership_modal = (interaction, result)
 
@@ -169,7 +165,6 @@ class PartnershipModal(Modal):
             await interaction.followup.send("✅ Données reçues. Une action manuelle est peut-être nécessaire pour les publier.", ephemeral=True)
         except Exception:
             pass
-
 
 class SimpleTicketModal(Modal):
     """Modal pour ticket simple (Autres) - demande rapide"""
@@ -293,7 +288,7 @@ class PartnershipDecisionView(View):
     async def on_timeout(self):
         for item in self.children:
             item.disabled = True
-
+        await message.edit(view=self)
 # ------------------------------
 # Helper functions
 # ------------------------------
@@ -382,7 +377,7 @@ async def create_partnership_ticket(bot: discord.Client, user: discord.User, for
         description=f"**Type :** {form_data['company_type']}",
         color=discord.Color.gold()
     )
-    embed.add_field(name="PDG", value=f"{form_data['first_name']} {form_data['last_name']} (<@{pdg_id_int})", inline=False)
+    embed.add_field(name="PDG", value=f"{form_data['first_name']} {form_data['last_name']} (<@{pdg_id_int}>)", inline=False)
     embed.add_field(name="ID PDG", value=str(pdg_id_int), inline=True)
     embed.add_field(name="Entreprise", value=form_data["company_name"], inline=True)
     embed.set_footer(text=f"Demandé par {user} • ID {user.id}")
