@@ -1,4 +1,3 @@
-# tickets.py
 import discord
 import random
 import logging

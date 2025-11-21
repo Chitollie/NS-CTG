@@ -1,6 +1,6 @@
 import discord
 from discord.ui import View, Select, Button
-from tickets import create_ticket_channel
+from .tickets import create_ticket_channel, clean_and_send
 import os
 from dotenv import load_dotenv
 

@@ -1,11 +1,10 @@
-# contact_main.py
 import discord
 from discord.ext import commands
 from discord.ui import View, Select
-from tickets import create_ticket_channel
-from partner import PartnershipModal
-from contact_agents import send_contact_menu
-from utils.auto_message import clean_and_send  # <-- ton script auto_message
+from .tickets import create_ticket_channel, clean_and_send
+from .partner import PartnershipModal
+from .contact_agents import send_contact_menu
+from bot.utils.auto_messages import clean_and_send
 import os
 from dotenv import load_dotenv
 
