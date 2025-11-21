@@ -8,7 +8,7 @@ load_dotenv()
 PARTNER_FCHANNEL_ID = int(os.getenv("PARTNER_FCHANNEL_ID", 0))
 PARTNERS_DATA_CHANNEL_ID = int(os.getenv("PARTNERS_DATA_CHANNEL_ID", 0))
 
-PARTNER_REQUESTS = {}  # ticket_id -> dict des infos et status
+PARTNER_REQUESTS = {} 
 
 # ---------------- MODALS ----------------
 class PartnershipModal(Modal):
@@ -70,13 +70,12 @@ class PartnershipDecisionView(View):
         self.add_item(Button(style=discord.ButtonStyle.danger, label="Refuser", custom_id="refuse"))
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return True  # ici tu peux restreindre aux membres de la direction
+        return True
 
     @discord.ui.button(label="Accepter", style=discord.ButtonStyle.success)
     async def accept_callback(self, interaction: discord.Interaction, button: Button):
         PARTNER_REQUESTS[self.ticket_channel_id]["data"]["status"] = "accepted"
 
-        # Envoie embed "Non envoyé" avec statut de chaque partie
         ticket_channel = interaction.channel
         embed = discord.Embed(
             title=f"Informations complémentaires — {self.request_data['company_name']}",
@@ -137,7 +136,6 @@ class PartnerInfoModal(Modal):
             "extra_info": self.extra_info.value
         }
 
-        # Met à jour l'embed avec le statut des deux parties
         ticket_channel = interaction.channel
         msg_id = PARTNER_REQUESTS[self.ticket_channel_id]["info_embed_msg_id"]
         try:
@@ -155,7 +153,7 @@ class PartnerInfoModal(Modal):
         await interaction.response.send_message("✅ Informations enregistrées.", ephemeral=True)
 
 # ---------------- FONCTION DEPLOY ----------------
-async def deploy_partnership_menu(bot: commands.Bot):
+async def deploy_partnership_menu(bot):
     """Déploie le menu initial dans le channel de contact."""
     from bot.config import CONTACTS_CHANNEL_ID
 
@@ -168,5 +166,5 @@ async def deploy_partnership_menu(bot: commands.Bot):
         description="Choisissez une option ci-dessous :",
         color=discord.Color.blurple()
     )
-    view = PartnershipDecisionView(0, {})  # id et data fictifs pour menu initial
+    view = PartnershipDecisionView(0, {})
     await clean_and_send(channel, embed=embed, view=view)
