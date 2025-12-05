@@ -65,10 +65,7 @@ async def setup_events(bot: commands.Bot):
                 channel = guild.get_channel(MISSADMIN_CHANNEL_ID) if guild else None
                 if channel:
                     stars = "".join(["⭐" if i < (state.note or 0) else "☆" for i in range(5)])
-                    embed = discord.Embed(
-                        title="Nouveau feedback",
-                        description=f"Note : {stars}\nCommentaire: {state.comment or 'Aucun'}"
-                    )
+                    embed = discord.Embed(title="Nouveau feedback", description=f"Note : {stars}\nCommentaire: {state.comment or 'Aucun'}")
                     await channel.send(embed=embed)
                 await message.channel.send("✅ Merci pour votre feedback !")
                 feedback_states.pop(message.author.id, None)

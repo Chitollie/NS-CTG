@@ -57,6 +57,7 @@ class AnnounceConfirmView(discord.ui.View):
     everyone="Mentionner @everyone dans l'annonce"
 )
 async def annonces_cmd(interaction: discord.Interaction, message: str, channel: discord.TextChannel, everyone: bool = False):
+    message = message.replace("\\n", "\n")
     embed = discord.Embed(
         title="📣 Aperçu de l'annonce",
         description=message,
