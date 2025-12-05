@@ -49,37 +49,30 @@ class AnnounceConfirmView(discord.ui.View):
         self.stop()
 
 
-@app_commands.command(name="annonces", description="Envoyer une annonce dans un salon choisi (administrateurs uniquement)")
-@app_commands.checks.has_permissions(administrator=True)
-@app_commands.describe(
-    message="Le message d'annonce à envoyer",
-    channel="Le salon où envoyer l'annonce",
-    everyone="Mentionner @everyone dans l'annonce"
-)
-async def annonces_cmd(interaction: discord.Interaction, message: str, channel: discord.TextChannel, everyone: bool = False):
-    message = message.replace("\\n", "\n")
-    embed = discord.Embed(
-        title="📣 Aperçu de l'annonce",
-        description=message,
-        color=discord.Color.blue()
-    )
-    embed.add_field(name="Salon cible", value=channel.mention)
-    if everyone:
-        embed.add_field(name="Mention", value="@everyone")
-
-    view = AnnounceConfirmView(content=message, author_id=interaction.user.id, channel=channel, everyone=everyone)
-    await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-
-
 class AnnoncesCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command()
-    @commands.is_owner()
-    async def announce(self, ctx: commands.Context, *, message: str):
-        """Envoie une annonce"""
-        await ctx.send(f"📢 **Annonce:** {message}")
+    @app_commands.command(name="annonces", description="Envoyer une annonce dans un salon choisi (administrateurs uniquement)")
+    @app_commands.checks.has_permissions(administrator=True)
+    @app_commands.describe(
+        message="Le message d'annonce à envoyer",
+        channel="Le salon où envoyer l'annonce",
+        everyone="Mentionner @everyone dans l'annonce"
+    )
+    async def annonces_cmd(self, interaction: discord.Interaction, message: str, channel: discord.TextChannel, everyone: bool = False):
+        message = message.replace("\\n", "\n")
+        embed = discord.Embed(
+            title="📣 Aperçu de l'annonce",
+            description=message,
+            color=discord.Color.blue()
+        )
+        embed.add_field(name="Salon cible", value=channel.mention)
+        if everyone:
+            embed.add_field(name="Mention", value="@everyone")
+
+        view = AnnounceConfirmView(content=message, author_id=interaction.user.id, channel=channel, everyone=everyone)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(AnnoncesCog(bot))
