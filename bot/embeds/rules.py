@@ -10,14 +10,12 @@ async def send_rules(bot: discord.Client, channel_id: int = DEFAULT_CHANNEL_ID):
     if channel is None or not isinstance(channel, discord.TextChannel):
         return
 
-    # --- Vérifie s'il existe déjà un embed avec ce titre ---
     async for message in channel.history(limit=50):
         if message.author == bot.user and message.embeds:
             embed = message.embeds[0]
             if embed.title == MESSAGE_IDENTIFIER:
                 return
 
-    # --- Crée l'embed ---
     embed = discord.Embed(
         title=MESSAGE_IDENTIFIER,
         description=(

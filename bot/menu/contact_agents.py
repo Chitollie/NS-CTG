@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 TICKETS_CATEGORY_ID = int(os.getenv("TICKETS_CATEGORY_ID", 0))
-# === CONFIGURATION ===
+
 AGENTS = {
     "Alina Wolf": {"role": "PDG", "numero": "59669-70941", "discord_id": 725425681177247908},
     "Brian Stanford": {"role": "Co-PDG", "numero": "59783-70510", "discord_id": 1263956791818195087},
@@ -61,6 +61,5 @@ class MenuView(View):
         super().__init__(timeout=None)
         self.add_item(MenuSelect())
 
-# === FONCTION PRINCIPALE ===
 async def send_contact_menu(interaction: discord.Interaction):
     await interaction.response.send_message("📞 Choisis une personne à contacter :", view=MenuView(), ephemeral=True)

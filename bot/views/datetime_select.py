@@ -7,11 +7,10 @@ class DateSelect(Select):
         today = datetime.datetime.now()
         options = []
         
-        # Générer les options pour les 14 prochains jours
         for i in range(14):
             date = today + datetime.timedelta(days=i)
             label = date.strftime("%d/%m/%Y")
-            description = date.strftime("%A").capitalize()  # Nom du jour
+            description = date.strftime("%A").capitalize()
             options.append(discord.SelectOption(
                 label=label,
                 description=description,
@@ -28,7 +27,6 @@ class HourSelect(Select):
     def __init__(self):
         options = []
         
-        # Générer les heures (00-23)
         for hour in range(24):
             label = f"{hour:02d}:00"
             options.append(discord.SelectOption(
@@ -46,7 +44,6 @@ class MinuteSelect(Select):
     def __init__(self):
         options = []
         
-        # Générer les minutes par tranches de 5
         for minute in range(0, 60, 5):
             label = f":{minute:02d}"
             options.append(discord.SelectOption(
@@ -62,27 +59,23 @@ class MinuteSelect(Select):
 
 class DateTimeSelectView(View):
     def __init__(self):
-        super().__init__(timeout=300)  # 5 minutes timeout
+        super().__init__(timeout=300)
         self.selected_date = None
         self.selected_hour = None
         self.selected_minute = None
         
-        # Ajouter les sélecteurs
         self.date_select = DateSelect()
         self.hour_select = HourSelect()
         self.minute_select = MinuteSelect()
         
-        # Configurer les callbacks
         self.date_select.callback = self.date_callback
         self.hour_select.callback = self.hour_callback
         self.minute_select.callback = self.minute_callback
         
-        # Ajouter les composants
         self.add_item(self.date_select)
         self.add_item(self.hour_select)
         self.add_item(self.minute_select)
         
-        # Bouton de confirmation
         self.confirm_button = discord.ui.Button(
             label="✅ Confirmer",
             style=discord.ButtonStyle.success,
@@ -105,7 +98,6 @@ class DateTimeSelectView(View):
         await self._update_confirmation_status(interaction)
 
     async def _update_confirmation_status(self, interaction: discord.Interaction):
-        # Activer le bouton de confirmation si tout est sélectionné
         was_disabled = self.confirm_button.disabled
         self.confirm_button.disabled = not all([
             self.selected_date,
@@ -126,7 +118,6 @@ class DateTimeSelectView(View):
             )
             return
             
-        # Construire la date
         try:
             date_obj = datetime.datetime.strptime(
                 f"{self.selected_date} {self.selected_hour}:{self.selected_minute}",
@@ -140,7 +131,6 @@ class DateTimeSelectView(View):
                 )
                 return
                 
-            # Stocker la date dans l'interaction pour récupération
             interaction.client.temp_storage = getattr(interaction.client, "temp_storage", {})
             interaction.client.temp_storage[interaction.user.id] = date_obj
             

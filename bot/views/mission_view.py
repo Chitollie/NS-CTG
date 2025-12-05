@@ -2,7 +2,9 @@ import datetime
 import discord
 from discord.ui import View, button
 from ..config import ROLE_AGENTS_ID
-from ..utils.missions_data import missions
+from ..utils.missions_data import missions, save_missions
+from ..utils.missions_data import missions as _missions_backup
+from ..utils.missions_data import save_missions as _save_missions_backup
 
 class MissionValidationView(View):
     def __init__(self, nom: str, user_id: str, lieu: str, nb_agents: int, date: datetime.datetime):
@@ -22,6 +24,7 @@ class MissionValidationView(View):
         mission_msg_id = interaction.message.id
         if mission_msg_id in missions:
             missions[mission_msg_id]["agents_confirmed"][interaction.user.id] = True
+            save_missions()
         await interaction.followup.send("✅ Ta présence a été enregistrée.", ephemeral=True)
 
     @button(label="Non, je ne pourrai pas", style=discord.ButtonStyle.secondary)
@@ -33,6 +36,7 @@ class MissionValidationView(View):
         mission_msg_id = interaction.message.id
         if mission_msg_id in missions:
             missions[mission_msg_id]["agents_confirmed"][interaction.user.id] = False
+            save_missions()
         await interaction.followup.send("❌ Ta non-présence a été enregistrée.", ephemeral=True)
 
     async def handle_mission(self, msg_id: int, bot: discord.Client):
@@ -40,13 +44,11 @@ class MissionValidationView(View):
         if not mission:
             return
 
-        reminder_time = mission["date"] - datetime.timedelta(minutes=30)
+        reminder_time = mission.get("date") - datetime.timedelta(minutes=30) if mission.get("date") else None
         now = datetime.datetime.now()
 
-        if now < reminder_time:
-            # wait until reminder time
+        if reminder_time and now < reminder_time:
             await discord.utils.sleep_until(reminder_time)
-            # mission["channel"] may be stored as str or int
             channel_raw = mission.get("channel")
             channel_id = None
             if channel_raw is None:
@@ -69,8 +71,9 @@ class MissionValidationView(View):
                     msg_text += f"✅ Présents : {', '.join(present)}"
                 await channel.send(msg_text)
             mission["reminder_sent"] = True
+            save_missions()
 
-        if now < mission["date"]:
+        if mission.get("date") and now < mission["date"]:
             await discord.utils.sleep_until(mission["date"])
 
         nb_agents = mission.get("nb_agents", 0)
@@ -92,3 +95,4 @@ class MissionValidationView(View):
                 f"✅ Mission terminée pour {mission['nom']} ({mission.get('id')}).\nTarif dû : **{tarif:,} $**"
             )
         missions.pop(msg_id, None)
+        save_missions()

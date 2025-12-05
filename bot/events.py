@@ -21,9 +21,6 @@ from bot.views.mission_admin_view import (
     send_modify_choice,
 )
 
-# Dictionnaire des états de feedback
-feedback_states = {}
-
 
 async def setup_events(bot: commands.Bot):
 
@@ -31,7 +28,6 @@ async def setup_events(bot: commands.Bot):
     async def on_ready():
         print(f"✅ Connecté en tant que {bot.user}")
         try:
-            # Synchronisation des commandes slash
             synced = await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
             print(f"Commandes slash synchronisées : {len(synced)}")
         except Exception as e:
@@ -44,18 +40,15 @@ async def setup_events(bot: commands.Bot):
         if message.author.bot:
             return
 
-        # Vérifie si c'est un message privé (DM)
         if not isinstance(message.channel, discord.DMChannel):
             return
 
-        # Récupère l'état du feedback
         state = feedback_states.get(message.author.id)
         if not state:
             return
 
         content = message.content.strip().lower()
 
-        # Étape 1 — Demande de note
         if state.step == 1:
             if content == "non":
                 await message.channel.send("Merci, aucun feedback n'a été transmis.")
@@ -69,7 +62,6 @@ async def setup_events(bot: commands.Bot):
 
             await message.channel.send("Veuillez entrer un chiffre entre 1 et 5, ou 'non'.")
 
-        # Étape 2 — Demande de commentaire
         elif state.step == 2:
             if content == "non":
                 state.comment = None
@@ -78,7 +70,6 @@ async def setup_events(bot: commands.Bot):
 
             await send_recap(message.author)
 
-        # Étape 3 — Récapitulatif / envoi
         elif state.step == 3:
             if content == "envoyer":
                 guild = bot.get_guild(GUILD_ID)
@@ -104,7 +95,6 @@ async def setup_events(bot: commands.Bot):
             elif content == "modifier":
                 await send_modify_choice(message.author)
 
-        # Étape 4 — Choix de modification
         elif state.step == 4:
             if content == "note":
                 await send_note_request(message.author)

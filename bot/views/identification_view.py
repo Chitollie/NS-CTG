@@ -16,11 +16,9 @@ class IdentificationModal(Modal, title="Identification"):
     )
 
     async def on_submit(self, interaction: discord.Interaction):
-        # Déferer la réponse immédiatement pour éviter le timeout de 3s si le traitement prend du temps
         try:
             await interaction.response.defer(ephemeral=True)
         except Exception:
-            # Si defer échoue (très rare), on continue quand même
             pass
 
         guild = interaction.guild
@@ -31,11 +29,9 @@ class IdentificationModal(Modal, title="Identification"):
 
         new_nick = f"{self.nom_prenom.value} | {self.user_id.value}"
 
-        # Récupère le grade demandé
         grade = (self.grade_specifique.value or "").strip().lower()
 
         if grade in ["lspd", "sams"]:
-            # On envoie la demande dans le salon de vérif
             verif_channel = guild.get_channel(VERIFROLE_CHANNEL_ID)
             if not isinstance(verif_channel, discord.TextChannel):
                 await interaction.followup.send(
@@ -66,7 +62,6 @@ class IdentificationModal(Modal, title="Identification"):
                 ephemeral=True)
 
         else:
-            # Cas standard → changement de pseudo + ajout du rôle citoyen
             try:
                 if isinstance(interaction.user, discord.Member):
                     await interaction.user.edit(nick=new_nick)
@@ -95,10 +90,6 @@ class IdentificationButtonView(View):
 
 
 async def setup(bot: commands.Bot):
-    """Envoie le message d'identification dans le channel configuré en utilisant clean_and_send.
-
-    Ce setup fait un fetch si nécessaire et planifie l'envoi si le bot n'est pas encore prêt.
-    """
     try:
         from .. import config
         from ..utils.auto_messages import clean_and_send
@@ -129,7 +120,6 @@ async def setup(bot: commands.Bot):
             bot_filter="Clique sur le bouton pour t'identifier"
         )
 
-    # Planifier l'envoi via la boucle (sûr depuis setup_hook)
     try:
         bot.loop.create_task(send_ident())
     except Exception as e:

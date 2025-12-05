@@ -37,7 +37,6 @@ async def send_tarifs(client: discord.Client):
                     inline=True)
     embed.set_footer(text="Simulation disponible via le /menu")
 
-    # Nettoie les anciens messages et envoie le nouveau
     await clean_and_send(channel, embed=embed, bot_filter=MESSAGE_IDENTIFIER)
 
 

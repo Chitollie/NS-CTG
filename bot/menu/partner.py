@@ -8,7 +8,7 @@ load_dotenv()
 PARTNER_FCHANNEL_ID = int(os.getenv("PARTNER_FCHANNEL_ID", 0))
 PARTNERS_DATA_CHANNEL_ID = int(os.getenv("PARTNERS_DATA_CHANNEL_ID", 0))
 
-PARTNER_REQUESTS = {}  # stocke toutes les demandes avec leurs statuts
+PARTNER_REQUESTS = {}
 
 # ---------------- MODALS ----------------
 class PartnershipModal(Modal):
@@ -66,7 +66,6 @@ class PartnershipDecisionView(View):
         self.ticket_channel_id = ticket_channel_id
         self.request_data = request_data
 
-        # Un seul bouton Accepter et Refuser
         self.add_item(Button(style=discord.ButtonStyle.success, label="Accepter", custom_id="accept"))
         self.add_item(Button(style=discord.ButtonStyle.danger, label="Refuser", custom_id="refuse"))
 
@@ -139,7 +138,6 @@ class PartnerInfoModal(Modal):
             "extra_info": self.extra_info.value
         }
 
-        # Mettre à jour l'embed statut
         ticket_channel = interaction.channel
         msg_id = ticket_data["info_embed_msg_id"]
         try:
@@ -156,7 +154,6 @@ class PartnerInfoModal(Modal):
 
         await interaction.response.send_message("✅ Informations enregistrées.", ephemeral=True)
 
-        # Si les deux ont rempli → envoyer le récapitulatif
         if all(ticket_data["info_submitted"].values()):
             await self.send_offer_recap(ticket_channel, ticket_data)
 
@@ -193,7 +190,6 @@ class PartnerOfferDecisionView(View):
         ticket_data = PARTNER_REQUESTS[self.ticket_channel_id]["data"]
         ticket_data["status"] = "offer_refused"
         await interaction.response.send_message(f"❌ Offre refusée par {interaction.user.mention}", ephemeral=False)
-        # On peut rouvrir le modal pour modifier l'offre si besoin
 
     async def handle_signature(self, interaction: discord.Interaction, ticket_data: dict):
         embed = discord.Embed(
@@ -219,7 +215,6 @@ class PartnerSignatureView(View):
 
         await interaction.response.send_message(f"✅ {interaction.user.mention} a signé le contrat.", ephemeral=False)
 
-        # Si les deux ont signé → envoyer le récap final
         if all(ticket_data["signed"].values()):
             await self.send_final_summary(interaction.channel, ticket_data, interaction.guild)
 
@@ -232,7 +227,6 @@ class PartnerSignatureView(View):
         embed.add_field(name="Direction", value=str(ticket_data["direction_info"]), inline=False)
         embed.add_field(name="PDG", value=str(ticket_data["pdg_info"]), inline=False)
 
-        # Envoyer dans le channel de données
         db_channel = guild.get_channel(PARTNERS_DATA_CHANNEL_ID)
         if db_channel:
             await db_channel.send(embed=embed)

@@ -1,0 +1,20 @@
+{
+  "123456789012345678": {
+    "id": "684128534410690561",
+    "lieu": "Raton Canyon/ Parc national du mont chiliad",
+    "nb_agents": 3,
+    "channel": 1424408664122458121,
+    "admin_channel": 1433804730454511636,
+    "admin_msg_id": 1445158824171536434,
+    "date_debut": "13-12T18:00",
+    "date_fin": "13-12T19:30",
+    "validated": true,
+    "reminder_sent": false,
+    "started": false,
+    "agents_confirmed": {
+      "1156268413837123774": true,
+      "1263956791818195087": true,
+      "1017039390012350494": true
+    }
+  }
+}

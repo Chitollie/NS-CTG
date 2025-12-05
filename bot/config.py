@@ -41,7 +41,6 @@ GRADE_DR = get_env_list("GRADE_DR")
 GRADE_AGTCONF = get_env_list("GRADE_AGTCONF")
 GRADE_RCR = get_env_list("GRADE_RCR")
 
-# Token
 TOKEN = os.getenv("TOKEN")
 if TOKEN is None:
     raise ValueError("TOKEN n'est pas défini dans le .env")

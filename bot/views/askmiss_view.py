@@ -3,21 +3,26 @@ from discord.ext import commands
 from discord.ui import View, button, Modal, TextInput
 import datetime
 
-
+# ------------------ MODAL ------------------
 class DemandeAgentsModal(Modal, title="Demande d'agents"):
-    nom_mission = TextInput(label="Nom de la mission")
+    #nom_mission = TextInput(label="Nom de la mission")
     lieu = TextInput(label="Lieu de la mission")
     nb_agents = TextInput(label="Nombre d'agents nécessaires", placeholder="Ex : 3")
+    date_debut = TextInput(
+        label="Date de début (JJ/MM à HHhMM)", 
+        placeholder="Ex : 05/11 à 14h30"
+    )
+    date_fin = TextInput(
+        label="Date de fin (JJ/MM à HHhMM, JJ/MM optionnel)", 
+        placeholder="Ex : 05/11 à 16h00"
+    )
     notes = TextInput(
-        label="Notes additionnelles (optionnel)",
-        required=False,
+        label="Notes additionnelles (optionnel)", 
+        required=False, 
         style=discord.TextStyle.paragraph
     )
 
     async def on_submit(self, interaction: discord.Interaction):
-        # On va d'abord afficher le sélecteur de date de début
-        from .datetime_select import DateTimeSelectView
-
         try:
             nb_agents = int(self.nb_agents.value)
             if nb_agents <= 0:
@@ -27,66 +32,52 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
             await interaction.response.send_message("❌ Le nombre d'agents doit être un nombre valide.", ephemeral=True)
             return
 
-        # Sélection date/heure de début
-        date_view_start = DateTimeSelectView()
-        await interaction.response.send_message(
-            "📅 Sélectionnez la date et l'heure de DÉBUT de la mission :",
-            view=date_view_start,
-            ephemeral=True
-        )
-        await date_view_start.wait()
-        date_debut = getattr(interaction.client, "temp_storage", {}).get(interaction.user.id)
-        if not date_debut:
-            await interaction.followup.send("❌ Erreur lors de la sélection de la date de début.", ephemeral=True)
+        year = datetime.datetime.now().year
+        # ---- Début ----
+        try:
+            jour, reste = self.date_debut.value.split("/", 1)
+            mois, heure_min = reste.strip().split("à")
+            heure, minute = heure_min.strip().split("h")
+            date_debut = datetime.datetime(
+                year, int(mois), int(jour), int(heure), int(minute)
+            )
+        except:
+            await interaction.response.send_message("❌ La date de début est invalide.", ephemeral=True)
             return
         if date_debut < datetime.datetime.now():
-            await interaction.followup.send("❌ La date de début doit être dans le futur.", ephemeral=True)
+            await interaction.response.send_message("❌ La date de début doit être dans le futur.", ephemeral=True)
             return
 
-        # Sélection date/heure de fin
-        date_view_end = DateTimeSelectView()
-        await interaction.followup.send(
-            "📅 Sélectionnez la date et l'heure de FIN de la mission :",
-            view=date_view_end,
-            ephemeral=True
-        )
-        await date_view_end.wait()
-        date_fin = getattr(interaction.client, "temp_storage", {}).get(interaction.user.id)
-        if not date_fin:
-            await interaction.followup.send("❌ Erreur lors de la sélection de la date de fin.", ephemeral=True)
+        # ---- Fin ----
+        try:
+            jour_fin, reste = (self.date_fin.value.split("/", 1) + [""])[:2]
+            mois_fin, heure_min_fin = (reste.strip().split("à") + [""])[:2]
+            if not jour_fin: jour_fin = str(date_debut.day)
+            if not mois_fin: mois_fin = str(date_debut.month)
+            heure_fin, minute_fin = heure_min_fin.strip().split("h")
+            date_fin = datetime.datetime(
+                year, int(mois_fin), int(jour_fin), int(heure_fin), int(minute_fin)
+            )
+        except:
+            await interaction.response.send_message("❌ La date de fin est invalide.", ephemeral=True)
             return
         if date_fin <= date_debut:
-            await interaction.followup.send("❌ La date de fin doit être après la date de début.", ephemeral=True)
+            await interaction.response.send_message("❌ La date de fin doit être après la date de début.", ephemeral=True)
             return
+
 
         from ..utils.missions_data import missions
-        from .mission_admin_view import MissionParticipationView, MissionAdminView
-
-        try:
-            nb_agents = int(self.nb_agents.value)
-            if nb_agents <= 0:
-                await interaction.followup.send("❌ Le nombre d'agents doit être positif.", ephemeral=True)
-                return
-        except ValueError:
-            await interaction.followup.send("❌ Le nombre d'agents doit être un nombre valide.", ephemeral=True)
-            return
-
-        # La vérification de la date a déjà été faite dans le sélecteur
+        from ..config import MISS_CHANNEL_ID, MISSADMIN_CHANNEL_ID
+        from .mission_admin_view import MissionAdminView
 
         guild = interaction.guild
-        if guild is None:
-            await interaction.followup.send("❌ Erreur : serveur introuvable.", ephemeral=True)
-            return
-
-        from ..config import MISS_CHANNEL_ID
         mission_channel = guild.get_channel(MISS_CHANNEL_ID)
         if not isinstance(mission_channel, discord.TextChannel):
-            await interaction.followup.send("❌ Salon de missions introuvable.", ephemeral=True)
+            await interaction.response.send_message("❌ Salon de missions introuvable.", ephemeral=True)
             return
 
-        # Create mission data
         mission_data = {
-            "nom": self.nom_mission.value,
+            #"nom": self.nom_mission.value,
             "id": str(interaction.user.id),
             "lieu": self.lieu.value,
             "nb_agents": nb_agents,
@@ -97,24 +88,21 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
             "reminder_sent": False
         }
 
-        # Send initial mission message (pending validation)
         embed = discord.Embed(
-            title=f"📋 Nouvelle mission : {self.nom_mission.value}",
+            title=f"📋 Nouvelle mission au : {self.lieu.value}",
             description=f"Demande par {interaction.user.mention}\n\n⏳ *En cours de validation par un haut gradé*",
             color=discord.Color.orange()
         )
-        embed.add_field(name="Lieu", value=self.lieu.value, inline=False)
+        #embed.add_field(name="Lieu", value=self.lieu.value, inline=False)
         embed.add_field(name="Agents requis", value=str(nb_agents), inline=True)
-        embed.add_field(name="Début", value=date_debut.strftime("%d/%m/%Y à %H:%M"), inline=True)
-        embed.add_field(name="Fin", value=date_fin.strftime("%d/%m/%Y à %H:%M"), inline=True)
+        embed.add_field(name="Début", value=date_debut.strftime("%d/%m à %Hh%M"), inline=True)
+        embed.add_field(name="Fin", value=date_fin.strftime("%d/%m à %Hh%M"), inline=True)
         if self.notes.value:
             embed.add_field(name="Notes", value=self.notes.value, inline=False)
 
         msg = await mission_channel.send(embed=embed)
         missions[msg.id] = mission_data
 
-        # Send validation request to admin channel
-        from ..config import MISSADMIN_CHANNEL_ID
         admin_channel = guild.get_channel(MISSADMIN_CHANNEL_ID)
         if isinstance(admin_channel, discord.TextChannel):
             admin_embed = discord.Embed(
@@ -122,40 +110,28 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
                 description=f"Demandeur : {interaction.user.mention}",
                 color=discord.Color.blue()
             )
-            admin_embed.add_field(name="Mission", value=self.nom_mission.value, inline=False)
-            admin_embed.add_field(name="Lieu", value=self.lieu.value, inline=False)
-            admin_embed.add_field(name="Agents requis", value=str(nb_agents), inline=True)
-            admin_embed.add_field(name="Début", value=date_debut.strftime("%d/%m/%Y à %H:%M"), inline=True)
-            admin_embed.add_field(name="Fin", value=date_fin.strftime("%d/%m/%Y à %H:%M"), inline=True)
+            admin_embed.add_field(name="Mission", value=self.lieu.value, inline=False)
+            #admin_embed.add_field(name="Lieu", value=self.lieu.value, inline=False)
+            admin_embed.add_field(name="Agents requis", value=str(nb_agents), inline=False)
+            admin_embed.add_field(name="Début", value=date_debut.strftime("%d/%m à %Hh%M"), inline=True)
+            admin_embed.add_field(name="Fin", value=date_fin.strftime("%d/%m à %Hh%M"), inline=True)
             if self.notes.value:
                 admin_embed.add_field(name="Notes", value=self.notes.value, inline=False)
 
-            await admin_channel.send(
-                embed=admin_embed,
-                view=MissionAdminView(mission_data, msg.id)
-            )
+            await admin_channel.send(embed=admin_embed, view=MissionAdminView(mission_data, msg.id))
 
-        await interaction.followup.send(
-            f"✅ Ta demande de mission a été envoyée",
-            ephemeral=True
-        )
-
+        await interaction.response.send_message("✅ Ta demande de mission a été envoyée", ephemeral=True)
 
 class AskMissView(View):
     def __init__(self):
         super().__init__(timeout=None)
 
-    @button(label="Faire une demande d'agents", style=discord.ButtonStyle.primary, custom_id="askmiss_button")
-    async def askmiss_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+    @button(label="Faire une demande d'agents", style=discord.ButtonStyle.primary, custom_id="askmiss_button") 
+    async def askmiss_button(self, interaction: discord.Interaction, button: discord.ui.Button): 
         await interaction.response.send_modal(DemandeAgentsModal())
 
-
 async def setup(bot: commands.Bot):
-    """Envoie le message de demande d'agents dans le channel configuré.
-
-    Utilise clean_and_send et effectue un fetch si nécessaire. Planifie l'envoi si le bot
-    n'est pas encore prêt.
-    """
+    """Envoie le bouton de demande d'agents dans le channel configuré avec clean_and_send"""
     try:
         from .. import config
         from ..utils.auto_messages import clean_and_send
@@ -181,9 +157,10 @@ async def setup(bot: commands.Bot):
 
         embed = discord.Embed(
             title="📢 Demandes d'agents",
-            description="Clique sur le bouton ci-dessous pour demander une sécurisation.",
-            color=discord.Color.green(),
+            description="Clique sur le bouton ci-dessous pour demander une mission.",
+            color=discord.Color.green()
         )
+
         await clean_and_send(
             channel,
             embed=embed,

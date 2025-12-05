@@ -1,5 +1,8 @@
+import asyncio
 import discord
 from discord.ext import commands
+from bot.utils import missions_data
+
 from bot.config import TOKEN, GUILD_ID
 from bot.events import setup_events
 from bot.commands.menu import menu_cmd
@@ -21,6 +24,50 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_message(message):
+
+    if message.author.bot: return
+    if message.author.id in feedback_states:
+        state = feedback_states[message.author.id]
+        content = message.content.strip().lower()
+        if state.step == 1:
+            if content == "non":
+                state.note = None
+                await send_recap(message.author)
+            elif content.isdigit() and 1 <= int(content) <= 5:
+                state.note = int(content)
+                await send_comment_request(message.author)
+            else:
+                await message.channel.send("Veuillez répondre par un nombre entre 1 et 5, ou 'non'.")
+        elif state.step == 2:
+            if content == "non":
+                state.comment = None
+                await send_recap(message.author)
+            else:
+                state.comment = message.content
+                await send_recap(message.author)
+        elif state.step == 3:
+            if content == "envoyer":
+                guild = bot.get_guild(GUILD_ID)
+                admin_channel = guild.get_channel(MISSADMIN_CHANNEL_ID)
+                embed = discord.Embed(title=f"📊 Feedback - {state.mission_data['nom']}", color=discord.Color.green())
+                stars = "★" * state.note + "☆" * (5 - state.note) if state.note else "Aucun"
+                embed.add_field(name="Note", value=stars, inline=False)
+                embed.add_field(name="Commentaire", value=state.comment or "Aucun", inline=False)
+                if isinstance(admin_channel, discord.TextChannel):
+                    await admin_channel.send(embed=embed)
+                await message.channel.send("Merci ! Votre feedback a bien été envoyé.")
+                feedback_states.pop(message.author.id, None)
+            elif content == "modifier":
+                await send_modify_choice(message.author)
+            else:
+                await message.channel.send("Répondez 'envoyer' ou 'modifier'.")
+        elif state.step == 4:
+            if content == "note":
+                await send_note_request(message.author)
+            elif content == "commentaire":
+                await send_comment_request(message.author)
+            else:
+                await message.channel.send("Répondez 'note' ou 'commentaire'.")
     if message.author.bot:
         return
 
@@ -151,6 +198,13 @@ async def setup_hook():
     await tarifs.setup(bot)
     await localisation.setup(bot)
     await deploy_contact_main(bot)
+
+    # restore persisted missions/views
+    try:
+        missions_data.load_missions()
+        await missions_data.restore_missions_views(bot)
+    except Exception as e:
+        print(f"Erreur restauration missions: {e}")
 
 @bot.event
 async def on_disconnect():

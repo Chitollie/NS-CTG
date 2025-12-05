@@ -4,10 +4,6 @@ from bot import config
 
 
 def setup_join(bot: commands.Bot):
-    """Register member join handlers on the provided bot instance.
-
-    This avoids running a separate bot instance and uses IDs from `bot.config`.
-    """
 
     WELCOME_CHANNEL_ID = getattr(config, "JOIN_CHANNEL_ID", None)
     CHANNEL_ID_IDENTITE = getattr(config, "IDENT_CHANNEL_ID", None)
@@ -34,9 +30,6 @@ def setup_join(bot: commands.Bot):
         embed.set_thumbnail(url=member.display_avatar.url)
         embed.set_footer(text="Un nouveau citoyen vient d'arriver 🌆")
 
-        # send only to text channels (safety for categories/forum/DMs)
         if isinstance(welcome_channel, discord.TextChannel):
             await welcome_channel.send(embed=embed)
         print(f"👋 Nouveau membre détecté : {member.name}")
-
-    # nothing returned; caller should call setup_join(bot)

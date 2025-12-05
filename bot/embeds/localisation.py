@@ -24,7 +24,6 @@ async def send_localisation_image(bot: discord.Client, image_url: str, alt_text:
     if image_url:
         embed.set_image(url=image_url)
     
-    # Nettoie les anciens messages et envoie le nouveau
     await clean_and_send(channel, embed=embed, bot_filter=MESSAGE_IDENTIFIER)
 
 

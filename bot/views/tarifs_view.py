@@ -18,19 +18,15 @@ class TarifsModal(Modal, title="Simulation de tarif"):
             await interaction.response.send_message("❌ La durée doit être positive et le nombre d'agents nul ou positif.", ephemeral=True)
             return
 
-        # calcule T = nombre de tranches de 30 minutes (au moins 1)
         t = max(1, math.ceil(minutes / 30))
 
-        # Paramètres tarifaires (par tranche de 30 minutes)
-        base = 20000  # frais fixes
-        rate_min = 10000  # tarif basse (recrue)
-        rate_max = 15000  # tarif haute (responsable)
+        base = 20000
+        rate_min = 10000
+        rate_max = 15000
 
-        # Calculer fourchette : tous les agents payés au tarif min -> tarif max
         low = base + ((nb_agents * rate_min) * t) * 1.3
         high = base + ((nb_agents * rate_max) * t) * 1.3
 
-        # Arrondir au millier supérieur
         def round_up_thousand(n):
             return int(math.ceil(n / 1000.0) * 1000)
 

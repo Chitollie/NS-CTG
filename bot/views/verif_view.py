@@ -40,7 +40,6 @@ class VerificationRoleView(View):
             await interaction.followup.send(
                 f"✅ Rôle {self.grade.upper()} attribué à {member.mention}.", ephemeral=True
             )
-            # interaction.message may be None depending on how the view was sent
             if interaction.message:
                 await interaction.message.edit(
                     content=f"✅ Demande approuvée pour {member.mention}",
