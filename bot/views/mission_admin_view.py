@@ -3,7 +3,7 @@ from discord.ui import View, button
 from typing import Dict, Any
 from bot.config import ROLE_AGENTS_ID, MISS_CHANNEL_ID, MISSADMIN_CHANNEL_ID
 from bot.utils.missions_data import missions, save_missions
-from bot.agents import agents_manager
+from bot.commands.agents import agents_manager
 
 # ============ FEEDBACK SYSTEM ============
 feedback_states = {}
