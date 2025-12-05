@@ -1,23 +1,20 @@
 import discord
-from discord.ui import View, button, Modal, TextInput
-from typing import Optional, Dict, Any
+from discord.ui import View, button
+from typing import Dict, Any
 from bot.config import ROLE_AGENTS_ID, MISS_CHANNEL_ID, MISSADMIN_CHANNEL_ID
 from bot.utils.missions_data import missions, save_missions
-from bot.utils.missions_data import missions as _missions_backup
-from bot.utils.missions_data import save_missions as _save_missions_backup
+from bot.agents import agents_manager
 
 class MissionAdminView(View):
     def __init__(self, mission_data: Dict[str, Any], msg_id: int):
         super().__init__(timeout=None)
         self.mission_data = mission_data
         self.msg_id = msg_id
-        self.client_id = int(mission_data.get("id", 0))
 
     @button(label="✅ Accepter", style=discord.ButtonStyle.success)
     async def accept_mission(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
-        admin_channel_id = MISSADMIN_CHANNEL_ID
-        admin_channel = interaction.guild.get_channel(admin_channel_id) if interaction.guild else None
+        admin_channel = interaction.guild.get_channel(MISSADMIN_CHANNEL_ID) if interaction.guild else None
         if not isinstance(admin_channel, discord.TextChannel):
             await interaction.followup.send("Canal admin introuvable.", ephemeral=True)
             return
@@ -30,19 +27,16 @@ class MissionAdminView(View):
 
         missions.setdefault(self.msg_id, self.mission_data)
         missions[self.msg_id]["admin_msg_id"] = admin_msg.id
-        missions[self.msg_id]["admin_channel"] = admin_channel_id
+        missions[self.msg_id]["admin_channel"] = admin_channel.id
+        missions[self.msg_id]["validated"] = True
         save_missions()
 
         # Edit mission message: remove validation text and attach participation view
-        mission_channel_raw = self.mission_data.get("channel")
+        mission_ch_id = self.mission_data.get("channel")
         try:
-            mission_ch_id = int(mission_channel_raw) if mission_channel_raw is not None else None
-        except Exception:
-            mission_ch_id = None
-        if mission_ch_id:
-            ch = interaction.client.get_channel(mission_ch_id)
-            if isinstance(ch, discord.TextChannel):
-                try:
+            if mission_ch_id:
+                ch = interaction.client.get_channel(int(mission_ch_id))
+                if isinstance(ch, discord.TextChannel):
                     mission_msg = await ch.fetch_message(self.msg_id)
                     if mission_msg and mission_msg.embeds:
                         embed = mission_msg.embeds[0]
@@ -51,15 +45,14 @@ class MissionAdminView(View):
                         embed.color = discord.Color.green()
                         embed.set_footer(text="✅ Mission validée")
                         await mission_msg.edit(embed=embed, view=MissionParticipationView(self.mission_data, self.msg_id))
-                except Exception:
-                    pass
+        except Exception:
+            pass
 
         await interaction.followup.send("Mission acceptée et message admin créé.", ephemeral=True)
 
     @button(label="❌ Refuser", style=discord.ButtonStyle.danger)
     async def refuse_mission(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
-        # mark refused and remove mission record if present
         if self.msg_id in missions:
             missions.pop(self.msg_id, None)
             save_missions()
@@ -79,6 +72,7 @@ class MissionParticipationView(View):
         missions[mission_msg_id].setdefault("agents_confirmed", {})
         missions[mission_msg_id]["agents_confirmed"][interaction.user.id] = True
         save_missions()
+        agents_manager.increment_missions(str(interaction.user.id))
         await interaction.followup.send("✅ Votre présence a été enregistrée!", ephemeral=True)
         await self.update_admin_tracking(interaction)
 
@@ -90,24 +84,23 @@ class MissionParticipationView(View):
         missions[mission_msg_id].setdefault("agents_confirmed", {})
         missions[mission_msg_id]["agents_confirmed"][interaction.user.id] = False
         save_missions()
+        agents_manager.increment_absence(str(interaction.user.id))
         await interaction.followup.send("❌ Votre absence a été enregistrée.", ephemeral=True)
         await self.update_admin_tracking(interaction)
 
     async def update_admin_tracking(self, interaction: discord.Interaction):
-        if not interaction.guild:
-            return
         data = missions.get(self.msg_id)
         if not data:
             return
         admin_channel_id = data.get("admin_channel") or MISSADMIN_CHANNEL_ID
-        admin_channel = interaction.client.get_channel(admin_channel_id)
-        if not isinstance(admin_channel, discord.TextChannel):
+        admin_ch = interaction.client.get_channel(admin_channel_id)
+        if not isinstance(admin_ch, discord.TextChannel):
             return
         admin_msg_id = data.get("admin_msg_id")
         if not admin_msg_id:
             return
         try:
-            admin_msg = await admin_channel.fetch_message(int(admin_msg_id))
+            admin_msg = await admin_ch.fetch_message(int(admin_msg_id))
             present = [f"<@{uid}>" for uid, ok in data.get("agents_confirmed", {}).items() if ok]
             absent = [f"<@{uid}>" for uid, ok in data.get("agents_confirmed", {}).items() if not ok]
             embed = discord.Embed(title=f"Suivi - {data.get('nom','')}", color=discord.Color.orange())
@@ -129,7 +122,6 @@ class MissionTrackingView(View):
         if self.msg_id in missions:
             missions[self.msg_id]["started"] = True
             save_missions()
-        # update admin message embed
         try:
             admin_ch_id = missions[self.msg_id].get("admin_channel") or MISSADMIN_CHANNEL_ID
             admin_ch = interaction.client.get_channel(admin_ch_id)
@@ -156,91 +148,3 @@ class MissionEndingView(View):
         save_missions()
         await interaction.followup.send("Mission terminée et supprimée.", ephemeral=True)
 
-# --- Feedback DM system ---
-feedback_states = {}
-
-class FeedbackState:
-    def __init__(self, user_id, mission_data, msg_id):
-        self.user_id = user_id
-        self.mission_data = mission_data
-        self.msg_id = msg_id
-        self.step = 0
-        self.note = None
-        self.comment = None
-
-async def start_feedback_dm(user, mission_data, msg_id, bot):
-    state = FeedbackState(user.id, mission_data, msg_id)
-    feedback_states[user.id] = state
-    intro_embed = discord.Embed(
-        title="⭐ Nous aimerions votre avis !",
-        description="Merci d'avoir fait appel à nous. Nous serions ravis d'avoir votre retour sur la mission."
-    )
-    await user.send(embed=intro_embed)
-    await send_note_request(user)
-
-async def send_note_request(user):
-    embed = discord.Embed(
-        title="⭐ Noter la mission",
-        description="Veuillez envoyer une note entre 1 et 5 (1=très mauvais, 5=excellent).\nSi vous ne souhaitez pas donner de retour, répondez 'non'."
-    )
-    await user.send(embed=embed)
-    feedback_states[user.id].step = 1
-
-async def send_comment_request(user):
-    embed = discord.Embed(
-        title="💬 Commentaire sur la mission",
-        description="Vous pouvez maintenant écrire un commentaire sur la mission.\nRépondez 'non' si vous ne souhaitez pas commenter."
-    )
-    await user.send(embed=embed)
-    feedback_states[user.id].step = 2
-
-async def send_recap(user):
-    state = feedback_states[user.id]
-    stars = "".join(["⭐" if i < state.note else "☆" for i in range(5)]) if state.note else ""
-    embed = discord.Embed(
-        title="📝 Récapitulatif de votre feedback",
-        description=f"Note : {stars}\nCommentaire : {state.comment if state.comment else 'Aucun'}"
-    )
-    embed.set_footer(text="Répondez 'envoyer' pour transmettre votre feedback, ou 'modifier' pour le changer.")
-    await user.send(embed=embed)
-    state.step = 3
-
-async def send_modify_choice(user):
-    embed = discord.Embed(
-        title="✏️ Modifier votre feedback",
-        description="Que souhaitez-vous modifier ? Répondez 'note' ou 'commentaire'."
-    )
-    await user.send(embed=embed)
-    feedback_states[user.id].step = 4
-
-class MissionFeedbackView(View):
-    def __init__(self, mission_data: Dict[str, Any], msg_id: int):
-        super().__init__(timeout=None)
-        self.mission_data = mission_data
-        self.msg_id = msg_id
-
-    def create_star_buttons(self):
-        pass
-
-    def create_star_callback(self, rating: int):
-        pass
-
-    async def feedback_callback(self, interaction: discord.Interaction):
-        pass
-
-    async def submit_callback(self, interaction: discord.Interaction):
-        pass
-
-class FeedbackModal(Modal):
-    def __init__(self):
-        super().__init__(title="Feedback")
-
-    feedback_text = TextInput(
-        label="Votre commentaire",
-        style=discord.TextStyle.paragraph,
-        placeholder="Comment s'est passée la mission? Des suggestions?",
-        required=True
-    )
-
-    async def on_submit(self, interaction: discord.Interaction):
-        pass

@@ -22,11 +22,12 @@ def _parse_datetime_maybe(val):
         try:
             return datetime.datetime.fromisoformat(val)
         except Exception:
-            # try common alternative formats if needed
-            try:
-                return datetime.datetime.strptime(val, "%d-%mT%H:%M")
-            except Exception:
-                return None
+            # try common alternative formats
+            for fmt in ("%d-%mT%H:%M", "%d/%m à %Hh%M", "%d/%m %H:%M"):
+                try:
+                    return datetime.datetime.strptime(val, fmt)
+                except Exception:
+                    continue
     return None
 
 def load_missions():
@@ -56,9 +57,7 @@ def load_missions():
             # Normalize date fields: prefer 'date', fallback to 'date_debut'
             date_val = v.get("date") or v.get("date_debut")
             v["date"] = _parse_datetime_maybe(date_val)
-            # parse date_fin if present
             v["date_fin"] = _parse_datetime_maybe(v.get("date_fin"))
-
             missions[mid] = v
     except Exception as e:
         print(f"Error loading missions file: {e}")
@@ -70,7 +69,6 @@ def save_missions():
         to_dump = {}
         for mid, data in missions.items():
             copy = dict(data)
-            # convert agents keys to str and date to iso if needed
             copy["agents_confirmed"] = {str(k): v for k, v in copy.get("agents_confirmed", {}).items()}
             if isinstance(copy.get("date"), datetime.datetime):
                 copy["date"] = copy["date"].isoformat()
@@ -123,7 +121,7 @@ async def restore_missions_views(bot):
                                     nom=data.get("nom", ""),
                                     user_id=data.get("id", ""),
                                     lieu=data.get("lieu", ""),
-                                    nb_agents=int(data.get("nb_agents", data.get("nb_agents", 0))),
+                                    nb_agents=int(data.get("nb_agents", 0)),
                                     date=data.get("date", None)
                                 )
                                 await m_msg.edit(view=mv)
