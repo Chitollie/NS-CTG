@@ -1,11 +1,11 @@
+import os
 import discord
 from discord.ext import commands
 from discord.ui import View, Select
-from .tickets import create_ticket_channel, clean_and_send
+from .tickets import create_ticket_channel
 from .partner import PartnershipModal
 from .contact_agents import send_contact_menu
 from bot.utils.auto_messages import clean_and_send
-import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -25,23 +25,19 @@ class MainMenuSelect(Select):
         choice = self.values[0]
 
         if choice == "partnership":
-            ticket_channel = await create_ticket_channel(interaction.guild, "partnership", interaction.user)
-            if ticket_channel:
-                await interaction.response.send_modal(PartnershipModal(ticket_channel.id))
+            # créer modal / ouvrir modal de partenariat
+            await interaction.response.send_modal(PartnershipModal())
+            return
 
         elif choice == "other":
-            ticket_channel = await create_ticket_channel(interaction.guild, "other", interaction.user)
-            if ticket_channel:
-                embed = discord.Embed(
-                    title="Bienvenue dans ton ticket 💬",
-                    description="Explique-nous ta demande ici !",
-                    color=discord.Color.blurple()
-                )
-                await ticket_channel.send(embed=embed)
-                await interaction.response.send_message(f"✅ Ticket créé : {ticket_channel.mention}", ephemeral=True)
+            # créer un ticket classique
+            await create_ticket_channel(interaction)
+            return
 
         elif choice == "contact_agent":
+            # afficher le menu de contact agents
             await send_contact_menu(interaction)
+            return
 
 class MainMenuView(View):
     def __init__(self):
@@ -60,3 +56,22 @@ async def deploy_contact_main(bot: commands.Bot):
     view = MainMenuView()
 
     await clean_and_send(channel, embed=embed, view=view)
+
+# ----------------- SETUP -----------------
+async def setup(bot: commands.Bot):
+    """
+    Enregistre la View persistante au démarrage.
+    Si CONTACTS_AUTO_DEPLOY=1 dans le .env, déploie aussi le message via clean_and_send.
+    """
+    try:
+        # Enregistrer la View pour que les callbacks persistent après un redémarrage
+        bot.add_view(MainMenuView())
+    except Exception as e:
+        print(f"⚠️ Erreur enregistrement MainMenuView: {e}")
+
+    # Optionnel : déployer le message au démarrage si explicitement demandé
+    try:
+        if os.getenv("CONTACTS_AUTO_DEPLOY", "0") == "1":
+            await deploy_contact_main(bot)
+    except Exception as e:
+        print(f"⚠️ Erreur lors du déploiement du menu contacts: {e}")
