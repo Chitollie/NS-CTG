@@ -5,7 +5,6 @@ from bot.config import (
     IDENT_CHANNEL_ID,
     ASKMISS_CHANNEL_ID,
     LOC_CHANNEL_ID,
-    GUILD_ID,
     MISSADMIN_CHANNEL_ID,
 )
 from bot.views.identification_view import IdentificationButtonView
@@ -73,7 +72,7 @@ async def setup_events(bot: commands.Bot):
         elif state.step == 3:
             if content == "envoyer":
                 guild = bot.get_guild(GUILD_ID)
-                channel = guild.get_channel(MISSADMIN_CHANNEL_ID)
+                channel = guild.get_channel(MISSADMIN_CHANNEL_ID) if guild else None
                 if channel:
                     stars = "".join(["⭐" if i < state.note else "☆" for i in range(5)])
                     embed = discord.Embed(

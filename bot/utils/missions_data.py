@@ -13,6 +13,22 @@ def _ensure_data_dir():
     if not os.path.exists(DATA_DIR):
         os.makedirs(DATA_DIR, exist_ok=True)
 
+def _parse_datetime_maybe(val):
+    if val is None:
+        return None
+    if isinstance(val, datetime.datetime):
+        return val
+    if isinstance(val, str):
+        try:
+            return datetime.datetime.fromisoformat(val)
+        except Exception:
+            # try common alternative formats if needed
+            try:
+                return datetime.datetime.strptime(val, "%d-%mT%H:%M")
+            except Exception:
+                return None
+    return None
+
 def load_missions():
     global missions
     _ensure_data_dir()
@@ -36,12 +52,13 @@ def load_missions():
                 except Exception:
                     pass
             v["agents_confirmed"] = agents
-            dt = v.get("date")
-            if isinstance(dt, str):
-                try:
-                    v["date"] = datetime.datetime.fromisoformat(dt)
-                except Exception:
-                    v["date"] = None
+
+            # Normalize date fields: prefer 'date', fallback to 'date_debut'
+            date_val = v.get("date") or v.get("date_debut")
+            v["date"] = _parse_datetime_maybe(date_val)
+            # parse date_fin if present
+            v["date_fin"] = _parse_datetime_maybe(v.get("date_fin"))
+
             missions[mid] = v
     except Exception as e:
         print(f"Error loading missions file: {e}")
@@ -57,6 +74,8 @@ def save_missions():
             copy["agents_confirmed"] = {str(k): v for k, v in copy.get("agents_confirmed", {}).items()}
             if isinstance(copy.get("date"), datetime.datetime):
                 copy["date"] = copy["date"].isoformat()
+            if isinstance(copy.get("date_fin"), datetime.datetime):
+                copy["date_fin"] = copy["date_fin"].isoformat()
             to_dump[str(mid)] = copy
         with open(DATA_PATH, "w", encoding="utf-8") as f:
             json.dump(to_dump, f, ensure_ascii=False, indent=2)
@@ -90,11 +109,12 @@ async def restore_missions_views(bot):
                         if data.get("admin_msg_id"):
                             await m_msg.edit(view=MissionParticipationView(data, int(msg_id)))
                             try:
-                                embed = m_msg.embeds[0]
-                                if embed and embed.description:
-                                    new_desc = embed.description.replace("⏳ En cours de validation par un haut gradé", "").strip()
-                                    embed.description = new_desc
-                                    await m_msg.edit(embed=embed)
+                                if m_msg.embeds:
+                                    embed = m_msg.embeds[0]
+                                    if embed and embed.description:
+                                        new_desc = embed.description.replace("⏳ En cours de validation par un haut gradé", "").strip()
+                                        embed.description = new_desc
+                                        await m_msg.edit(embed=embed)
                             except Exception:
                                 pass
                         else:
@@ -103,7 +123,7 @@ async def restore_missions_views(bot):
                                     nom=data.get("nom", ""),
                                     user_id=data.get("id", ""),
                                     lieu=data.get("lieu", ""),
-                                    nb_agents=int(data.get("nb_agents", 0)),
+                                    nb_agents=int(data.get("nb_agents", data.get("nb_agents", 0))),
                                     date=data.get("date", None)
                                 )
                                 await m_msg.edit(view=mv)
