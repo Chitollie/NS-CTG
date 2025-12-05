@@ -17,13 +17,6 @@ async def setup_bot():
             print("✅ Missions restaurées")
         except Exception as e:
             print(f"Erreur restauration missions: {e}")
-        
-        try:
-            from bot.commands.agents import setup as setup_agents
-            await setup_agents(bot)
-            print("✅ Système agents chargé")
-        except Exception as e:
-            print(f"Erreur chargement agents: {e}")
 
     bot.setup_hook = setup_hook
 
@@ -35,11 +28,14 @@ async def setup_bot():
         print(f"Erreur chargement événements: {e}")
 
     try:
-        from bot.commands import admin, agents, annonces, menu
+        from bot.commands import admin, annonces, menu
         await bot.add_cog(admin.AdminCog(bot))
-        await bot.add_cog(agents.AgentsCog(bot))
         await bot.add_cog(annonces.AnnoncesCog(bot))
         await bot.add_cog(menu.MenuCog(bot))
+        
+        from bot.commands.agents import setup as setup_agents
+        await setup_agents(bot)
+        
         print("✅ Commandes chargées")
     except Exception as e:
         print(f"Erreur chargement commandes: {e}")
