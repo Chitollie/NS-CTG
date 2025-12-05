@@ -22,7 +22,7 @@ from bot.views.mission_admin_view import (
 import os
 from dotenv import load_dotenv
 
-# Charge le .env depuis le même dossier que main.py (dossier bot)
+# Charge le .env depuis le même dossier que config.py
 env_path = os.path.join(os.path.dirname(__file__), ".env")
 load_dotenv(env_path)
 
@@ -44,7 +44,10 @@ def get_env_list(var_name: str) -> list[int]:
         return []
     return [int(v.strip()) for v in value.split(",") if v.strip().isdigit()]
 
-# Variables classiques
+TOKEN = os.getenv("TOKEN")
+if TOKEN is None:
+    raise ValueError("TOKEN n'est pas défini dans le .env")
+
 GUILD_ID = get_env_int("GUILD_ID")
 MISS_CHANNEL_ID = get_env_int("MISS_CHANNEL_ID")
 MISSADMIN_CHANNEL_ID = get_env_int("MISSADMIN_CHANNEL_ID")
@@ -66,15 +69,9 @@ PARTNER_FCHANNEL_ID = get_env_int("PARTNER_FCHANNEL_ID")
 TICKETS_CATEGORY_ID = get_env_int("TICKETS_CATEGORY_ID")
 AGENTS_CHANNEL_ID = get_env_int("AGENTS_CHANNEL_ID")
 
-# Grades
 GRADE_DR = get_env_list("GRADE_DR")
 GRADE_AGTCONF = get_env_list("GRADE_AGTCONF")
 GRADE_RCR = get_env_list("GRADE_RCR")
-
-TOKEN = os.getenv("TOKEN")
-if TOKEN is None:
-    raise ValueError("TOKEN n'est pas défini dans le .env")
-
 
 async def setup_events(bot: commands.Bot):
 

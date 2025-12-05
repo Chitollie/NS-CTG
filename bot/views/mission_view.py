@@ -1,10 +1,9 @@
 import datetime
 import discord
 from discord.ui import View, button
-from ..config import ROLE_AGENTS_ID
-from ..utils.missions_data import missions, save_missions
-from ..utils.missions_data import missions as _missions_backup
-from ..utils.missions_data import save_missions as _save_missions_backup
+from bot.config import ROLE_AGENTS_ID
+from bot.utils.missions_data import missions, save_missions
+from bot.agents import agents_manager
 
 class MissionValidationView(View):
     def __init__(self, nom: str, user_id: str, lieu: str, nb_agents: int, date: datetime.datetime):
@@ -22,9 +21,11 @@ class MissionValidationView(View):
             await interaction.followup.send("Erreur interne (message introuvable).", ephemeral=True)
             return
         mission_msg_id = interaction.message.id
-        if mission_msg_id in missions:
-            missions[mission_msg_id]["agents_confirmed"][interaction.user.id] = True
-            save_missions()
+        missions.setdefault(mission_msg_id, {})
+        missions[mission_msg_id].setdefault("agents_confirmed", {})
+        missions[mission_msg_id]["agents_confirmed"][interaction.user.id] = True
+        save_missions()
+        agents_manager.increment_missions(str(interaction.user.id))
         await interaction.followup.send("✅ Ta présence a été enregistrée.", ephemeral=True)
 
     @button(label="Non, je ne pourrai pas", style=discord.ButtonStyle.secondary)
@@ -34,9 +35,11 @@ class MissionValidationView(View):
             await interaction.followup.send("Erreur interne (message introuvable).", ephemeral=True)
             return
         mission_msg_id = interaction.message.id
-        if mission_msg_id in missions:
-            missions[mission_msg_id]["agents_confirmed"][interaction.user.id] = False
-            save_missions()
+        missions.setdefault(mission_msg_id, {})
+        missions[mission_msg_id].setdefault("agents_confirmed", {})
+        missions[mission_msg_id]["agents_confirmed"][interaction.user.id] = False
+        save_missions()
+        agents_manager.increment_absence(str(interaction.user.id))
         await interaction.followup.send("❌ Ta non-présence a été enregistrée.", ephemeral=True)
 
     async def handle_mission(self, msg_id: int, bot: discord.Client):
@@ -64,9 +67,8 @@ class MissionValidationView(View):
             if isinstance(channel, discord.TextChannel):
                 role = channel.guild.get_role(ROLE_AGENTS_ID)
                 mention = role.mention if role else ""
-
                 present = [f"<@{uid}>" for uid, ok in mission.get("agents_confirmed", {}).items() if ok]
-                msg_text = f"⏰ Rappel : Mission pour **{mission['nom']}** dans **30 min** au {mission['lieu']}. {mention}\n"
+                msg_text = f"⏰ Rappel : Mission pour **{mission.get('nom','')}** dans **30 min** au {mission.get('lieu','')}. {mention}\n"
                 if present:
                     msg_text += f"✅ Présents : {', '.join(present)}"
                 await channel.send(msg_text)
@@ -92,7 +94,7 @@ class MissionValidationView(View):
         channel = bot.get_channel(channel_id) if channel_id is not None else None
         if isinstance(channel, discord.TextChannel):
             await channel.send(
-                f"✅ Mission terminée pour {mission['nom']} ({mission.get('id')}).\nTarif dû : **{tarif:,} $**"
+                f"✅ Mission terminée pour {mission.get('nom','')} ({mission.get('id')}).\nTarif dû : **{tarif:,} $**"
             )
         missions.pop(msg_id, None)
         save_missions()

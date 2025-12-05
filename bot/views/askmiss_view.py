@@ -2,10 +2,10 @@ import discord
 from discord.ext import commands
 from discord.ui import View, button, Modal, TextInput
 import datetime
+from bot.utils.missions_data import missions, save_missions
+from bot.views.mission_admin_view import MissionAdminView
 
-# ------------------ MODAL ------------------
 class DemandeAgentsModal(Modal, title="Demande d'agents"):
-    #nom_mission = TextInput(label="Nom de la mission")
     lieu = TextInput(label="Lieu de la mission")
     nb_agents = TextInput(label="Nombre d'agents nécessaires", placeholder="Ex : 3")
     date_debut = TextInput(
@@ -33,7 +33,6 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
             return
 
         year = datetime.datetime.now().year
-        # ---- Début ----
         try:
             jour, reste = self.date_debut.value.split("/", 1)
             mois, heure_min = reste.strip().split("à")
@@ -48,13 +47,19 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
             await interaction.response.send_message("❌ La date de début doit être dans le futur.", ephemeral=True)
             return
 
-        # ---- Fin ----
         try:
-            jour_fin, reste = (self.date_fin.value.split("/", 1) + [""])[:2]
-            mois_fin, heure_min_fin = (reste.strip().split("à") + [""])[:2]
-            if not jour_fin: jour_fin = str(date_debut.day)
-            if not mois_fin: mois_fin = str(date_debut.month)
-            heure_fin, minute_fin = heure_min_fin.strip().split("h")
+            parts = self.date_fin.value.split("/", 1)
+            jour_fin = parts[0] if parts else ""
+            reste = parts[1] if len(parts) > 1 else ""
+            mois_fin = ""
+            heure_min_fin = ""
+            if reste:
+                mois_fin, heure_min_fin = (reste.strip().split("à") + [""])[:2]
+            if not jour_fin:
+                jour_fin = str(date_debut.day)
+            if not mois_fin:
+                mois_fin = str(date_debut.month)
+            heure_fin, minute_fin = (heure_min_fin.strip().split("h") + ["", ""])[:2]
             date_fin = datetime.datetime(
                 year, int(mois_fin), int(jour_fin), int(heure_fin), int(minute_fin)
             )
@@ -65,10 +70,7 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
             await interaction.response.send_message("❌ La date de fin doit être après la date de début.", ephemeral=True)
             return
 
-
-        from ..utils.missions_data import missions
-        from ..config import MISS_CHANNEL_ID, MISSADMIN_CHANNEL_ID
-        from .mission_admin_view import MissionAdminView
+        from bot.config import MISS_CHANNEL_ID, MISSADMIN_CHANNEL_ID
 
         guild = interaction.guild
         mission_channel = guild.get_channel(MISS_CHANNEL_ID)
@@ -77,15 +79,18 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
             return
 
         mission_data = {
-            #"nom": self.nom_mission.value,
             "id": str(interaction.user.id),
+            "nom": f"Mission - {self.lieu.value}",
             "lieu": self.lieu.value,
             "nb_agents": nb_agents,
             "date_debut": date_debut,
             "date_fin": date_fin,
+            "date": date_debut,
             "channel": mission_channel.id,
             "agents_confirmed": {},
-            "reminder_sent": False
+            "reminder_sent": False,
+            "validated": False,
+            "started": False,
         }
 
         embed = discord.Embed(
@@ -93,7 +98,6 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
             description=f"Demande par {interaction.user.mention}\n\n⏳ *En cours de validation par un haut gradé*",
             color=discord.Color.orange()
         )
-        #embed.add_field(name="Lieu", value=self.lieu.value, inline=False)
         embed.add_field(name="Agents requis", value=str(nb_agents), inline=True)
         embed.add_field(name="Début", value=date_debut.strftime("%d/%m à %Hh%M"), inline=True)
         embed.add_field(name="Fin", value=date_fin.strftime("%d/%m à %Hh%M"), inline=True)
@@ -102,6 +106,7 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
 
         msg = await mission_channel.send(embed=embed)
         missions[msg.id] = mission_data
+        save_missions()
 
         admin_channel = guild.get_channel(MISSADMIN_CHANNEL_ID)
         if isinstance(admin_channel, discord.TextChannel):
@@ -111,7 +116,6 @@ class DemandeAgentsModal(Modal, title="Demande d'agents"):
                 color=discord.Color.blue()
             )
             admin_embed.add_field(name="Mission", value=self.lieu.value, inline=False)
-            #admin_embed.add_field(name="Lieu", value=self.lieu.value, inline=False)
             admin_embed.add_field(name="Agents requis", value=str(nb_agents), inline=False)
             admin_embed.add_field(name="Début", value=date_debut.strftime("%d/%m à %Hh%M"), inline=True)
             admin_embed.add_field(name="Fin", value=date_fin.strftime("%d/%m à %Hh%M"), inline=True)
@@ -131,18 +135,10 @@ class AskMissView(View):
         await interaction.response.send_modal(DemandeAgentsModal())
 
 async def setup(bot: commands.Bot):
-    """Envoie le bouton de demande d'agents dans le channel configuré avec clean_and_send"""
-    try:
-        from .. import config
-        from ..utils.auto_messages import clean_and_send
-    except Exception as e:
-        print(f"⚠️ Erreur d'import dans askmiss.setup : {e}")
-        return
+    from bot.config import ASKMISS_CHANNEL_ID
+    from bot.utils.auto_messages import clean_and_send
 
-    ask_channel_id = getattr(config, "ASKMISS_CHANNEL_ID", None)
-    if ask_channel_id is None:
-        print("⚠️ ASKMISS_CHANNEL_ID n'est pas défini")
-        return
+    ask_channel_id = ASKMISS_CHANNEL_ID
 
     async def send_ask():
         channel = bot.get_channel(ask_channel_id)

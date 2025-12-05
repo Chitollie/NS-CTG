@@ -2,29 +2,17 @@ import json
 import os
 from typing import Dict, Any
 import discord
-from discord import app_commands
 from discord.ext import commands
 
 BASE_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(BASE_DIR, "data")
 DATA_PATH = os.path.normpath(os.path.join(DATA_DIR, "agents.json"))
 
-grades = [
-    "Recrue",   # 0
-    "Agent",    # 1
-    "Agent supérieur", # 2
-    "Responsable",  # 3
-    "Chef d'unité", # 4
-    "Manager",  # 5
-]
-
-ANNONCES_CHANNEL_ID = 1424408550918066266
-
 class AgentsManager:
     def __init__(self):
         self.agents: Dict[str, Dict[str, Any]] = {}
         self.embed_msg_id: int | None = None
-        _ensure_data_dir()
+        self._ensure_data_dir()
         self.load()
 
     def get_default(self, user_id: str, name: str = None):
@@ -52,12 +40,16 @@ class AgentsManager:
             self.embed_msg_id = None
 
     def save(self):
-        _ensure_data_dir()
+        self._ensure_data_dir()
         try:
             with open(DATA_PATH, "w", encoding="utf-8") as f:
                 json.dump({"agents": self.agents, "embed_msg_id": self.embed_msg_id}, f, ensure_ascii=False, indent=2)
         except Exception as e:
             print(f"Error saving agents file: {e}")
+
+    def _ensure_data_dir(self):
+        if not os.path.exists(DATA_DIR):
+            os.makedirs(DATA_DIR, exist_ok=True)
 
     def ensure_agent(self, user_id: str, name: str = None):
         if user_id not in self.agents:
@@ -76,6 +68,11 @@ class AgentsManager:
         self.save()
 
     def rank_up(self, user_id: str, new_rank: str):
+        ag = self.ensure_agent(user_id)
+        ag["rank"] = new_rank
+        self.save()
+
+    def rank_down(self, user_id: str, new_rank: str):
         ag = self.ensure_agent(user_id)
         ag["rank"] = new_rank
         self.save()
@@ -131,6 +128,8 @@ class AgentsManager:
                 channel = await bot.fetch_channel(AGENTS_CHANNEL_ID)
             except Exception:
                 return
+        if not isinstance(channel, discord.TextChannel):
+            return
         emb = await self.build_embed()
         if self.embed_msg_id:
             try:
@@ -143,11 +142,6 @@ class AgentsManager:
         self.embed_msg_id = m.id
         self.save()
 
-def _ensure_data_dir():
-    folder = os.path.dirname(DATA_PATH)
-    if not os.path.exists(folder):
-        os.makedirs(folder, exist_ok=True)
-
 agents_manager = AgentsManager()
 
 class AgentsCog(commands.Cog):
@@ -158,87 +152,6 @@ class AgentsCog(commands.Cog):
     async def on_ready(self):
         await agents_manager.restore_embed(self.bot)
 
-    @app_commands.command(name="agents", description="Gestionnaire des agents.")
-    @app_commands.checks.has_permissions(administrator=True)
-    @app_commands.describe(
-        agent="L'agent à gérer",
-        type="Type d'action (ex : Rank)",
-        action="Action si type = Rank : up ou down"
-    )
-    async def agents_cmd(self, interaction: discord.Interaction, agent: discord.Member, type: str, action: str = None):
-        await interaction.response.defer(ephemeral=True)
-
-        type = type.lower()
-        if type not in ["up", "down"]:
-            return await interaction.followup.send("Type invalide. Utilise `up` ou `down`.")
-
-        guild_roles = {role.name: role for role in interaction.guild.roles}
-
-        current_index = None
-        for i, grade in enumerate(grades):
-            if grade in guild_roles and guild_roles[grade] in agent.roles:
-                current_index = i
-                break
-
-        annonces_channel = interaction.guild.get_channel(ANNONCES_CHANNEL_ID)
-        if annonces_channel is None:
-            return await interaction.followup.send("Channel d'annonces introuvable !")
-
-        if type == "rank":
-            if action is None:
-                return await interaction.followup.send("Précise une action : `up` ou `down`.")
-            action = action.lower()
-            if action not in ["up", "down"]:
-                return await interaction.followup.send("Action invalide. Utilise `up` ou `down`.")
-            type = action
-
-        # --- UP ---
-        if type == "up":
-            if current_index is None:
-                new_grade = grades[0]
-                await agent.add_roles(guild_roles[new_grade])
-                await annonces_channel.send(f"📈 **{agent.mention} est maintenant {new_grade} !** 👏")
-                return await interaction.followup.send(f"Grade ajouté : {new_grade}")
-
-            if current_index == len(grades) - 1:
-                return await interaction.followup.send("Impossible de UP, il est déjà au grade maximal.")
-
-            old_role = guild_roles[grades[current_index]]
-            new_role = guild_roles[grades[current_index + 1]]
-
-            await agent.remove_roles(old_role)
-            await agent.add_roles(new_role)
-
-            await annonces_channel.send(f"📈 **{agent.mention} est passé de {old_role.name} à {new_role.name} !** 🚀")
-            return await interaction.followup.send(f"UP effectué : {old_role.name} → {new_role.name}")
-
-        # --- DOWN ---
-        if type == "down":
-            if current_index is None:
-                return await interaction.followup.send("Cet agent n'a aucun grade.")
-
-            if current_index == 0:
-                old_role = guild_roles[grades[0]]
-                await agent.remove_roles(old_role)
-
-                await annonces_channel.send(f"📉 **{agent.mention} a été retiré de Recrue. Il ne fait plus partie des agents.**")
-                try:
-                    await agent.send("❌ Vous avez été **licencié** et retiré de l'équipe des agents.")
-                except:
-                    pass
-
-                return await interaction.followup.send("Recrue retirée et agent licencié.")
-
-            old_role = guild_roles[grades[current_index]]
-            new_role = guild_roles[grades[current_index - 1]]
-
-            await agent.remove_roles(old_role)
-            await agent.add_roles(new_role)
-
-            await annonces_channel.send(f"📉 **{agent.mention} est descendu de {old_role.name} à {new_role.name}.**")
-            return await interaction.followup.send(f"DOWN effectué : {old_role.name} → {new_role.name}")
-
 async def setup(bot: commands.Bot):
     await bot.add_cog(AgentsCog(bot))
-    # restore embed once at setup
     await agents_manager.restore_embed(bot)

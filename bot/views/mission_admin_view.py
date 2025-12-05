@@ -5,6 +5,70 @@ from bot.config import ROLE_AGENTS_ID, MISS_CHANNEL_ID, MISSADMIN_CHANNEL_ID
 from bot.utils.missions_data import missions, save_missions
 from bot.agents import agents_manager
 
+# ============ FEEDBACK SYSTEM ============
+feedback_states = {}
+
+class FeedbackState:
+    def __init__(self, user_id: int, mission_data: Dict[str, Any], msg_id: int):
+        self.user_id = user_id
+        self.mission_data = mission_data
+        self.msg_id = msg_id
+        self.step = 0
+        self.note = None
+        self.comment = None
+
+async def send_note_request(user: discord.User):
+    embed = discord.Embed(
+        title="⭐ Noter la mission",
+        description="Veuillez envoyer une note entre 1 et 5 (1=très mauvais, 5=excellent).\nSi vous ne souhaitez pas donner de retour, répondez 'non'."
+    )
+    await user.send(embed=embed)
+    if user.id in feedback_states:
+        feedback_states[user.id].step = 1
+
+async def send_comment_request(user: discord.User):
+    embed = discord.Embed(
+        title="💬 Commentaire sur la mission",
+        description="Vous pouvez maintenant écrire un commentaire sur la mission.\nRépondez 'non' si vous ne souhaitez pas commenter."
+    )
+    await user.send(embed=embed)
+    if user.id in feedback_states:
+        feedback_states[user.id].step = 2
+
+async def send_recap(user: discord.User):
+    state = feedback_states.get(user.id)
+    if not state:
+        return
+    stars = "".join(["⭐" if i < (state.note or 0) else "☆" for i in range(5)]) if state.note else ""
+    embed = discord.Embed(
+        title="📝 Récapitulatif de votre feedback",
+        description=f"Note : {stars}\nCommentaire : {state.comment if state.comment else 'Aucun'}"
+    )
+    embed.set_footer(text="Répondez 'envoyer' pour transmettre votre feedback, ou 'modifier' pour le changer.")
+    await user.send(embed=embed)
+    state.step = 3
+
+async def send_modify_choice(user: discord.User):
+    embed = discord.Embed(
+        title="✏️ Modifier votre feedback",
+        description="Que souhaitez-vous modifier ? Répondez 'note' ou 'commentaire'."
+    )
+    await user.send(embed=embed)
+    if user.id in feedback_states:
+        feedback_states[user.id].step = 4
+
+async def start_feedback_dm(user: discord.User, mission_data: Dict[str, Any], msg_id: int, bot: discord.Client):
+    state = FeedbackState(user.id, mission_data, msg_id)
+    feedback_states[user.id] = state
+    intro_embed = discord.Embed(
+        title="⭐ Nous aimerions votre avis !",
+        description="Merci d'avoir fait appel à nous. Nous serions ravis d'avoir votre retour sur la mission."
+    )
+    await user.send(embed=intro_embed)
+    await send_note_request(user)
+
+# ============ MISSION VIEWS ============
+
 class MissionAdminView(View):
     def __init__(self, mission_data: Dict[str, Any], msg_id: int):
         super().__init__(timeout=None)

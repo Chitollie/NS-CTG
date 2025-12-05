@@ -22,7 +22,6 @@ def _parse_datetime_maybe(val):
         try:
             return datetime.datetime.fromisoformat(val)
         except Exception:
-            # try common alternative formats
             for fmt in ("%d-%mT%H:%M", "%d/%m à %Hh%M", "%d/%m %H:%M"):
                 try:
                     return datetime.datetime.strptime(val, fmt)
@@ -53,8 +52,6 @@ def load_missions():
                 except Exception:
                     pass
             v["agents_confirmed"] = agents
-
-            # Normalize date fields: prefer 'date', fallback to 'date_debut'
             date_val = v.get("date") or v.get("date_debut")
             v["date"] = _parse_datetime_maybe(date_val)
             v["date_fin"] = _parse_datetime_maybe(v.get("date_fin"))
@@ -82,8 +79,8 @@ def save_missions():
 
 async def restore_missions_views(bot):
     try:
-        from ..views.mission_admin_view import MissionParticipationView, MissionTrackingView
-        from ..views.mission_view import MissionValidationView
+        from bot.views.mission_admin_view import MissionParticipationView, MissionTrackingView
+        from bot.views.mission_view import MissionValidationView
     except Exception as e:
         print(f"Error importing views for restore: {e}")
         return
@@ -143,7 +140,7 @@ async def restore_missions_views(bot):
                         admin_ch_id = None
                 if not admin_ch_id:
                     try:
-                        from ..config import MISSADMIN_CHANNEL_ID
+                        from bot.config import MISSADMIN_CHANNEL_ID
                         admin_ch_id = MISSADMIN_CHANNEL_ID
                     except Exception:
                         admin_ch_id = None
