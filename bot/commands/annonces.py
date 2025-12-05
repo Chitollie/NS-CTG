@@ -69,3 +69,17 @@ async def annonces_cmd(interaction: discord.Interaction, message: str, channel: 
 
     view = AnnounceConfirmView(content=message, author_id=interaction.user.id, channel=channel, everyone=everyone)
     await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+
+class AnnoncesCog(commands.Cog):
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+
+    @commands.command()
+    @commands.is_owner()
+    async def announce(self, ctx: commands.Context, *, message: str):
+        """Envoie une annonce"""
+        await ctx.send(f"📢 **Annonce:** {message}")
+
+async def setup(bot: commands.Bot):
+    await bot.add_cog(AnnoncesCog(bot))

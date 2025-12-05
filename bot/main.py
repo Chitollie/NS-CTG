@@ -18,8 +18,8 @@ async def setup_bot():
         except Exception as e:
             print(f"Erreur restauration missions: {e}")
         
-        from bot.agents import setup as setup_agents
         try:
+            from bot.commands.agents import setup as setup_agents
             await setup_agents(bot)
             print("✅ Système agents chargé")
         except Exception as e:

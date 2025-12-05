@@ -3,7 +3,7 @@ import discord
 from discord.ui import View, button
 from bot.config import ROLE_AGENTS_ID
 from bot.utils.missions_data import missions, save_missions
-from bot.agents import agents_manager
+from bot.commands.agents import agents_manager
 
 class MissionValidationView(View):
     def __init__(self, nom: str, user_id: str, lieu: str, nb_agents: int, date: datetime.datetime):

@@ -5,6 +5,20 @@ import sys
 import asyncio
 import signal
 
+class AdminCog(commands.Cog):
+    def __init__(self, bot: commands.Bot):
+        self.bot = bot
+
+    @commands.command()
+    @commands.is_owner()
+    async def sync(self, ctx: commands.Context):
+        """Synchronise les commandes slash"""
+        try:
+            synced = await self.bot.tree.sync()
+            await ctx.send(f"✅ {len(synced)} commandes synchronisées")
+        except Exception as e:
+            await ctx.send(f"❌ Erreur : {e}")
+
 @app_commands.command(name="shutdown", description="Arrêter le bot proprement (administrateurs uniquement)")
 @app_commands.checks.has_permissions(administrator=True)
 async def shutdown_cmd(interaction: discord.Interaction):
@@ -52,3 +66,6 @@ def setup(bot: commands.Bot):
     signal.signal(signal.SIGINT, signal_handler)
     
     bot.tree.add_command(shutdown_cmd)
+
+async def setup(bot: commands.Bot):
+    await bot.add_cog(AdminCog(bot))
