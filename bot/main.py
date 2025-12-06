@@ -6,140 +6,150 @@ import importlib
 import inspect
 import pkgutil
 
+
 intents = discord.Intents.all()
-bot = commands.Bot(command_prefix="!", intents=intents)
 
-async def setup_bot():
-    async def setup_hook():
+bot = commands.Bot(
+    command_prefix="!",
+    intents=intents
+)
+
+
+# ============================================================
+#   S E T U P   H O O K  –  Discord.py 2.x
+# ============================================================
+
+@bot.event
+async def setup_hook():
+
+    # --- Sync des slash commands côté serveur ---
+    try:
         await bot.tree.sync(guild=discord.Object(id=GUILD_ID))
-        print("✅ Commandes slash synchronisées")
-        
-        try:
-            missions_data.load_missions()
-            await missions_data.restore_missions_views(bot)
-            print("✅ Missions restaurées")
-        except Exception as e:
-            print(f"Erreur restauration missions: {e}")
+        print("✅ Slash commands synchronisées")
+    except Exception as e:
+        print(f"❌ Erreur sync : {e}")
 
-    bot.setup_hook = setup_hook
-
+    # --- Chargement des événements ---
     try:
         from bot import events
         await events.setup_events(bot)
         print("✅ Événements chargés")
     except Exception as e:
-        print(f"Erreur chargement événements: {e}")
+        print(f"❌ Erreur chargement events : {e}")
 
+    # --- Chargement des Cogs ---
     try:
         from bot.commands import admin, annonces, menu
         await bot.add_cog(admin.AdminCog(bot))
         await bot.add_cog(annonces.AnnoncesCog(bot))
         await bot.add_cog(menu.MenuCog(bot))
-        
+
         from bot.commands.agents import setup as setup_agents
         await setup_agents(bot)
-        
+
         print("✅ Commandes chargées")
     except Exception as e:
-        print(f"Erreur chargement commandes: {e}")
+        print(f"❌ Erreur commands : {e}")
 
+    # --- VUES ----
     try:
         from bot.views.identification_view import setup as setup_ident
         await setup_ident(bot)
-        print("✅ Vue d'identification chargée")
+        print("✅ Identification view chargée")
     except Exception as e:
-        print(f"⚠️ Erreur chargement identification: {e}")
+        print(f"⚠️ Erreur identification view : {e}")
 
     try:
-        from bot.views.askmiss_view import setup as setup_askmiss
-        await setup_askmiss(bot)
-        print("✅ Vue demande missions chargée")
+        from bot.views.askmiss_view import setup as setup_ask
+        await setup_ask(bot)
+        print("✅ AskMission view chargée")
     except Exception as e:
-        print(f"⚠️ Erreur chargement askmiss: {e}")
+        print(f"⚠️ Erreur askmiss view : {e}")
 
-    try:
-        from bot.embeds.tarifs import setup as setup_tarifs
-        await setup_tarifs(bot)
-        print("✅ Embed tarifs chargé")
-    except Exception as e:
-        print(f"⚠️ Erreur chargement tarifs: {e}")
+    # --- EMBEDS / MENUS ---
+    for module_path, label in [
+        ("bot.embeds.tarifs", "Tarifs"),
+        ("bot.embeds.localisation", "Localisation"),
+        ("bot.menu.contact_main", "Contacts"),
+    ]:
+        try:
+            mod = importlib.import_module(module_path)
+            await mod.setup(bot)
+            print(f"✅ Embed {label} chargé")
+        except Exception as e:
+            print(f"⚠️ Erreur embed {label} : {e}")
 
-    try:
-        from bot.embeds.localisation import setup as setup_loc
-        await setup_loc(bot)
-        print("✅ Embed localisation chargé")
-    except Exception as e:
-        print(f"⚠️ Erreur chargement localisation: {e}")
-
-    try:
-        from bot.menu.contact_main import setup as setup_contact_embed
-        await setup_contact_embed(bot)
-        print("✅ Embed contacts chargé")
-    except Exception as e:
-        print(f"⚠️ Erreur chargement contacts embed: {e}")
-
-    try:
-        from bot.menu.contact_main import setup as setup_contact_main
-        await setup_contact_main(bot)
-        print("✅ Embed contacts chargé")
-    except Exception as e:
-        print(f"⚠️ Erreur chargement contacts embed: {e}")
-
-
+    # --- JOIN UTILS ---
     try:
         from bot.utils.join import setup_join
         setup_join(bot)
-        print("✅ Système de join chargé")
+        print("✅ System JOIN chargé")
     except Exception as e:
-        print(f"⚠️ Erreur chargement join: {e}")
+        print(f"⚠️ Erreur join : {e}")
 
+    # --- RESTAURATION DES MISSIONS ---
     try:
-        def _register_views_from_package(package_name: str):
-            try:
-                pkg = importlib.import_module(package_name)
-            except Exception:
-                return []
-            registered = []
-            for finder, name, ispkg in pkgutil.iter_modules(pkg.__path__):
-                full_name = f"{package_name}.{name}"
-                try:
-                    mod = importlib.import_module(full_name)
-                except Exception:
-                    continue
-                for _, obj in inspect.getmembers(mod, inspect.isclass):
-                    try:
-                        if issubclass(obj, discord.ui.View) and obj is not discord.ui.View:
-                            # Essayer d'instancier avec plusieurs fallback
-                            inst = None
-                            for args in ((), (0, "", ""), (None,)):
-                                try:
-                                    inst = obj(*args)
-                                    break
-                                except TypeError:
-                                    continue
-                            if inst is not None:
-                                bot.add_view(inst)
-                                registered.append(f"{full_name}.{obj.__name__}")
-                    except Exception:
-                        continue
-            return registered
+        missions_data.load_missions()
+        await missions_data.restore_missions_views(bot)
+        print("✅ Missions restaurées")
+    except Exception as e:
+        print(f"⚠️ Erreur restauration missions : {e}")
 
-        registered_views = []
-        registered_views += _register_views_from_package("bot.views")
-        registered_views += _register_views_from_package("bot.menu")
-
-        print(f"✅ Views persistantes enregistrées: {len(registered_views)}")
-        for v in registered_views:
+    # --- Views persistantes automatiques ---
+    try:
+        registered = register_persistent_views(bot)
+        print(f"✅ Views persistantes enregistrées : {len(registered)}")
+        for v in registered:
             print("  -", v)
     except Exception as e:
-        print(f"⚠️ Erreur enregistrement views persistantes: {e}")
+        print(f"⚠️ Erreur persistent views : {e}")
 
-    return bot
+
+
+# ============================================================
+#   Fonction de scan automatique des Views persistantes
+# ============================================================
+
+def register_persistent_views(bot):
+    registered = []
+
+    def scan_package(pkg_name: str):
+        try:
+            pkg = importlib.import_module(pkg_name)
+        except Exception:
+            return
+
+        for _, name, _ in pkgutil.iter_modules(pkg.__path__):
+            full = f"{pkg_name}.{name}"
+            try:
+                mod = importlib.import_module(full)
+            except Exception:
+                continue
+
+            for _, obj in inspect.getmembers(mod, inspect.isclass):
+                if issubclass(obj, discord.ui.View) and obj is not discord.ui.View:
+                    try:
+                        instance = obj()
+                        bot.add_view(instance)
+                        registered.append(f"{full}.{obj.__name__}")
+                    except Exception:
+                        pass
+
+    scan_package("bot.views")
+    scan_package("bot.menu")
+
+    return registered
+
+
+
+# ============================================================
+#                     L A U N C H   B O T
+# ============================================================
 
 async def main():
-    bot_instance = await setup_bot()
-    async with bot_instance:
-        await bot_instance.start(TOKEN)
+    async with bot:
+        await bot.start(TOKEN)
+
 
 if __name__ == "__main__":
     import asyncio

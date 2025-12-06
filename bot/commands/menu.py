@@ -8,9 +8,11 @@ class MenuCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="menu", description="Affiche le menu principal")
+    @app_commands.command(
+        name="menu",
+        description="Affiche le menu principal"
+    )
     async def menu(self, interaction: discord.Interaction):
-        """Affiche le menu principal"""
         embed = discord.Embed(
             title="Bienvenue chez Nova Sécurité",
             description="Choisissez une option ci-dessous :",
@@ -18,5 +20,15 @@ class MenuCog(commands.Cog):
         )
         await interaction.response.send_message(embed=embed, view=MenuView())
 
+    @commands.Cog.listener()
+    async def on_ready(self):
+        guild = discord.Object(id=GUILD_ID)
+        self.bot.tree.copy_global_to(guild=guild)
+        synced = await self.bot.tree.sync(guild=guild)
+        print(f"[Nova Sécurité] Slash commands synchronisées : {len(synced)}")
+
 async def setup(bot: commands.Bot):
-    await bot.add_cog(MenuCog(bot))
+    cog = MenuCog(bot)
+    await bot.add_cog(cog)
+
+    bot.tree.add_command(cog.menu)

@@ -44,7 +44,10 @@ class AgentsManager:
         self._ensure_data_dir()
         try:
             with open(DATA_PATH, "w", encoding="utf-8") as f:
-                json.dump({"agents": self.agents, "embed_msg_id": self.embed_msg_id}, f, ensure_ascii=False, indent=2)
+                json.dump(
+                    {"agents": self.agents, "embed_msg_id": self.embed_msg_id},
+                    f, ensure_ascii=False, indent=2
+                )
         except Exception as e:
             print(f"Error saving agents file: {e}")
 
@@ -148,7 +151,8 @@ class AgentsManager:
 
 agents_manager = AgentsManager()
 
-# ----------------- Cog principal -----------------
+
+# ----------------- COG -----------------
 class AgentsCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -157,7 +161,10 @@ class AgentsCog(commands.Cog):
     async def on_ready(self):
         await agents_manager.restore_embed(self.bot)
 
-    @app_commands.command(name="agent", description="Gérer un agent")
+    @app_commands.command(
+        name="agent",
+        description="Gérer un agent"
+    )
     @app_commands.describe(
         user="Utilisateur à gérer",
         type="Type de gestion",
@@ -173,48 +180,49 @@ class AgentsCog(commands.Cog):
     async def agent(self, interaction: Interaction, user: User, type: app_commands.Choice[str], action: str = None, value: str = None):
         uid = str(user.id)
 
-        # Afficher profil complet
         if type.value == "profile":
             emb = await agents_manager.build_agent_profile(uid)
             await interaction.response.send_message(embed=emb)
             return
 
-        # Gérer rang
         if type.value == "rank":
             if action not in ["up", "down"]:
-                return await interaction.response.send_message("❌ Action invalide pour le rang (up/down).", ephemeral=True)
+                return await interaction.response.send_message("❌ Action invalide (up/down).", ephemeral=True)
             new_rank = value or "Recrue"
             agents_manager.rank_up(uid, new_rank)
             await agents_manager.restore_embed(self.bot)
-            await interaction.response.send_message(f"✅ Rang de {user.mention} changé à {new_rank}")
+            await interaction.response.send_message(f"✅ Rang de {user.mention} → {new_rank}")
 
-        # Gérer spécialité
         elif type.value == "specialty":
             agents_manager.set_specialty(uid, value)
             await agents_manager.restore_embed(self.bot)
-            await interaction.response.send_message(f"✅ Spécialité de {user.mention} mise à jour à {value or 'Aucune'}")
+            await interaction.response.send_message(f"✅ Spécialité mise à jour : {value or 'Aucune'}")
 
-        # Gérer permis
         elif type.value == "permits":
             if action not in ["add", "remove"]:
-                return await interaction.response.send_message("❌ Action invalide pour les permis (add/remove).", ephemeral=True)
+                return await interaction.response.send_message("❌ Action invalide (add/remove).", ephemeral=True)
             if action == "add":
                 agents_manager.add_permit(uid, value)
-                msg = f"✅ Permis {value} ajouté à {user.mention}"
+                msg = f"✅ Permis {value} ajouté"
             else:
                 agents_manager.remove_permit(uid, value)
-                msg = f"✅ Permis {value} retiré à {user.mention}"
+                msg = f"🚫 Permis {value} retiré"
             await agents_manager.restore_embed(self.bot)
-            await interaction.response.send_message(msg)
+            await interaction.response.send_message(f"{msg} à {user.mention}")
+
 
 async def setup(bot: commands.Bot):
-    await bot.add_cog(AgentsCog(bot))
-    # Restaurer l'embed principal au démarrage
-    emb = await agents_manager.build_embed()
+    cog = AgentsCog(bot)
+    await bot.add_cog(cog)
+
+    bot.tree.add_command(cog.agent)
     try:
-        from bot.config import AGENTS_CHANNEL_ID
-        channel = bot.get_channel(AGENTS_CHANNEL_ID)
-        if channel:
-            await channel.send(embed=emb)
-    except Exception:
-        pass
+        from bot.config import GUILD_ID
+        if GUILD_ID:
+            guild = discord.Object(id=GUILD_ID)
+            bot.tree.copy_global_to(guild=guild)
+            await bot.tree.sync(guild=guild)
+        else:
+            await bot.tree.sync()
+    except Exception as e:
+        print(f"[Slash Sync Error] {e}")

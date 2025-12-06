@@ -17,9 +17,6 @@ class MissionValidationView(View):
     @button(label="Oui, je serai présent", style=discord.ButtonStyle.primary)
     async def oui_agent(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer(ephemeral=True)
-        if interaction.message is None:
-            await interaction.followup.send("Erreur interne (message introuvable).", ephemeral=True)
-            return
         mission_msg_id = interaction.message.id
         missions.setdefault(mission_msg_id, {})
         missions[mission_msg_id].setdefault("agents_confirmed", {})
@@ -31,9 +28,6 @@ class MissionValidationView(View):
     @button(label="Non, je ne pourrai pas", style=discord.ButtonStyle.secondary)
     async def non_agent(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer(ephemeral=True)
-        if interaction.message is None:
-            await interaction.followup.send("Erreur interne (message introuvable).", ephemeral=True)
-            return
         mission_msg_id = interaction.message.id
         missions.setdefault(mission_msg_id, {})
         missions[mission_msg_id].setdefault("agents_confirmed", {})
@@ -47,23 +41,15 @@ class MissionValidationView(View):
         if not mission:
             return
 
+        # Rappel 30 min avant
         reminder_time = mission.get("date") - datetime.timedelta(minutes=30) if mission.get("date") else None
         now = datetime.datetime.now()
 
         if reminder_time and now < reminder_time:
             await discord.utils.sleep_until(reminder_time)
             channel_raw = mission.get("channel")
-            channel_id = None
-            if channel_raw is None:
-                channel_id = None
-            elif isinstance(channel_raw, int):
-                channel_id = channel_raw
-            else:
-                try:
-                    channel_id = int(str(channel_raw))
-                except (TypeError, ValueError):
-                    channel_id = None
-            channel = bot.get_channel(channel_id) if channel_id is not None else None
+            channel_id = int(channel_raw) if channel_raw else None
+            channel = bot.get_channel(channel_id) if channel_id else None
             if isinstance(channel, discord.TextChannel):
                 role = channel.guild.get_role(ROLE_AGENTS_ID)
                 mention = role.mention if role else ""
@@ -75,23 +61,15 @@ class MissionValidationView(View):
             mission["reminder_sent"] = True
             save_missions()
 
+        # Envoi du tarif à la fin de mission
         if mission.get("date") and now < mission["date"]:
             await discord.utils.sleep_until(mission["date"])
 
         nb_agents = mission.get("nb_agents", 0)
         tarif = nb_agents * 15000
         channel_raw = mission.get("channel")
-        channel_id = None
-        if channel_raw is None:
-            channel_id = None
-        elif isinstance(channel_raw, int):
-            channel_id = channel_raw
-        else:
-            try:
-                channel_id = int(str(channel_raw))
-            except (TypeError, ValueError):
-                channel_id = None
-        channel = bot.get_channel(channel_id) if channel_id is not None else None
+        channel_id = int(channel_raw) if channel_raw else None
+        channel = bot.get_channel(channel_id) if channel_id else None
         if isinstance(channel, discord.TextChannel):
             await channel.send(
                 f"✅ Mission terminée pour {mission.get('nom','')} ({mission.get('id')}).\nTarif dû : **{tarif:,} $**"

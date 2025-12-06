@@ -1,11 +1,12 @@
 import discord
 from discord.ui import View, button
 from typing import Dict, Any
-from bot.config import ROLE_AGENTS_ID, MISS_CHANNEL_ID, MISSADMIN_CHANNEL_ID
+from bot.config import ROLE_AGENTS_ID, MISSADMIN_CHANNEL_ID, RADIO_CHANNEL_ID
 from bot.utils.missions_data import missions, save_missions
 from bot.commands.agents import agents_manager
+import random
 
-# ============ FEEDBACK SYSTEM ============
+# ================= FEEDBACK SYSTEM =================
 feedback_states = {}
 
 class FeedbackState:
@@ -57,7 +58,7 @@ async def send_modify_choice(user: discord.User):
     if user.id in feedback_states:
         feedback_states[user.id].step = 4
 
-async def start_feedback_dm(user: discord.User, mission_data: Dict[str, Any], msg_id: int, bot: discord.Client):
+async def start_feedback_dm(user: discord.User, mission_data: Dict[str, Any], msg_id: int, bot: discord.Client = None):
     state = FeedbackState(user.id, mission_data, msg_id)
     feedback_states[user.id] = state
     intro_embed = discord.Embed(
@@ -67,7 +68,7 @@ async def start_feedback_dm(user: discord.User, mission_data: Dict[str, Any], ms
     await user.send(embed=intro_embed)
     await send_note_request(user)
 
-# ============ MISSION VIEWS ============
+# ================= MISSION VIEWS =================
 
 class MissionAdminView(View):
     def __init__(self, mission_data: Dict[str, Any], msg_id: int):
@@ -83,19 +84,21 @@ class MissionAdminView(View):
             await interaction.followup.send("Canal admin introuvable.", ephemeral=True)
             return
 
+        # Embed suivi admin
         track_embed = discord.Embed(title=f"Suivi - {self.mission_data.get('nom','')}", color=discord.Color.blue())
         track_embed.add_field(name="Client", value=self.mission_data.get("id", "N/A"), inline=False)
         track_embed.add_field(name="Lieu", value=self.mission_data.get("lieu", "N/A"), inline=False)
         track_view = MissionTrackingView(self.mission_data, self.msg_id)
         admin_msg = await admin_channel.send(embed=track_embed, view=track_view)
 
+        # Enregistrer mission
         missions.setdefault(self.msg_id, self.mission_data)
         missions[self.msg_id]["admin_msg_id"] = admin_msg.id
         missions[self.msg_id]["admin_channel"] = admin_channel.id
         missions[self.msg_id]["validated"] = True
         save_missions()
 
-        # Edit mission message: remove validation text and attach participation view
+        # Edit message mission initial
         mission_ch_id = self.mission_data.get("channel")
         try:
             if mission_ch_id:
@@ -186,29 +189,64 @@ class MissionTrackingView(View):
         if self.msg_id in missions:
             missions[self.msg_id]["started"] = True
             save_missions()
-        try:
-            admin_ch_id = missions[self.msg_id].get("admin_channel") or MISSADMIN_CHANNEL_ID
-            admin_ch = interaction.client.get_channel(admin_ch_id)
-            if isinstance(admin_ch, discord.TextChannel):
-                admin_msg = await admin_ch.fetch_message(int(missions[self.msg_id]["admin_msg_id"]))
-                embed = discord.Embed(title=f"Suivi - {self.mission_data.get('nom','')}", color=discord.Color.gold())
-                embed.add_field(name="Status", value="En cours", inline=False)
-                await admin_msg.edit(embed=embed)
-        except Exception:
-            pass
-        await interaction.followup.send("Mission démarrée.", ephemeral=True)
+
+        # Générer radio et mention des agents
+        radio_code = random.randint(10000, 100000)
+        missions[self.msg_id]["radio"] = radio_code
+        save_missions()
+
+        radio_channel = interaction.client.get_channel(RADIO_CHANNEL_ID)
+        if isinstance(radio_channel, discord.TextChannel):
+            confirmed_agents = missions[self.msg_id].get("agents_confirmed", {})
+            agents_list = [f"<@{uid}>" for uid, ok in confirmed_agents.items() if ok]
+            mention_text = ", ".join(agents_list) if agents_list else ""
+            embed = discord.Embed(
+                title=f"📻 Radio pour {self.mission_data.get('nom','')}",
+                description=f"Code radio : **{radio_code}**\nAgents présents : {mention_text}",
+                color=discord.Color.gold()
+            )
+            await radio_channel.send(embed=embed)
+
+        await interaction.followup.send("Mission démarrée 🚀 Radio envoyée.", ephemeral=True)
 
 class MissionEndingView(View):
-    def __init__(self, mission_data: Dict[str, Any], msg_id: int, present_agents: list):
+    def __init__(self, mission_data: Dict[str, Any], msg_id: int):
         super().__init__(timeout=None)
         self.mission_data = mission_data
         self.msg_id = msg_id
-        self.present_agents = present_agents
 
     @button(label="🏁 Terminer la mission", style=discord.ButtonStyle.danger)
     async def end_mission(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
-        missions.pop(self.msg_id, None)
-        save_missions()
-        await interaction.followup.send("Mission terminée et supprimée.", ephemeral=True)
+        mission = missions.get(self.msg_id)
+        if not mission:
+            await interaction.followup.send("Mission introuvable.", ephemeral=True)
+            return
 
+        # Marquer la mission comme terminée
+        mission["ended"] = True
+        save_missions()
+
+        # Supprimer les boutons dans le channel admin et mission
+        admin_ch = interaction.client.get_channel(mission.get("admin_channel"))
+        mission_ch = interaction.client.get_channel(mission.get("channel"))
+        for ch in (admin_ch, mission_ch):
+            if isinstance(ch, discord.TextChannel):
+                try:
+                    msg = await ch.fetch_message(self.msg_id if ch == mission_ch else mission.get("admin_msg_id"))
+                    if msg:
+                        embed = msg.embeds[0] if msg.embeds else None
+                        if embed:
+                            embed.color = discord.Color.dark_grey()
+                            embed.set_footer(text="✅ Mission terminée")
+                            await msg.edit(embed=embed, view=None)
+                except Exception:
+                    continue
+
+        # Envoyer le DM au client pour feedback
+        client_id = mission.get("client_id")
+        client_user = interaction.client.get_user(client_id) if client_id else None
+        if client_user:
+            await start_feedback_dm(client_user, mission, self.msg_id)
+
+        await interaction.followup.send("Mission terminée ✅ Feedback envoyé au client.", ephemeral=True)

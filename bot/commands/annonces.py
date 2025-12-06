@@ -53,7 +53,10 @@ class AnnoncesCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @app_commands.command(name="annonces", description="Envoyer une annonce dans un salon choisi (administrateurs uniquement)")
+    @app_commands.command(
+        name="annonces",
+        description="Envoyer une annonce dans un salon choisi (administrateurs uniquement)"
+    )
     @app_commands.checks.has_permissions(administrator=True)
     @app_commands.describe(
         message="Le message d'annonce à envoyer",
@@ -71,8 +74,30 @@ class AnnoncesCog(commands.Cog):
         if everyone:
             embed.add_field(name="Mention", value="@everyone")
 
-        view = AnnounceConfirmView(content=message, author_id=interaction.user.id, channel=channel, everyone=everyone)
+        view = AnnounceConfirmView(
+            content=message,
+            author_id=interaction.user.id,
+            channel=channel,
+            everyone=everyone
+        )
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
+
 async def setup(bot: commands.Bot):
-    await bot.add_cog(AnnoncesCog(bot))
+    cog = AnnoncesCog(bot)
+    await bot.add_cog(cog)
+
+    # ➤ AJOUT AU TREE
+    bot.tree.add_command(cog.annonces_cmd)
+
+    # ➤ SYNC DIRECTE
+    try:
+        from bot.config import GUILD_ID
+        if GUILD_ID:
+            guild = discord.Object(id=GUILD_ID)
+            bot.tree.copy_global_to(guild=guild)
+            await bot.tree.sync(guild=guild)
+        else:
+            await bot.tree.sync()
+    except Exception as e:
+        print(f"[Slash Sync Error] {e}")
