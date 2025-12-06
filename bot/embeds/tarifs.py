@@ -25,9 +25,9 @@ async def send_tarifs(client: discord.Client):
         description=
         "Voici un aperçu des tarifs de base. Utilisez la simulation pour obtenir une estimation précise.",
         color=discord.Color.gold())
-    embed.add_field(name="Frais de base",
-                    value="20 000 $ (coûts de services)",
-                    inline=False)
+    #embed.add_field(name="Frais de base",
+                    #value="20 000 $ (coûts de services)",
+                    #inline=False)
     embed.add_field(name="Recrue", value="10 000 $ / 30 minutes", inline=True)
     embed.add_field(name="Agent confirmé",
                     value="12 500 $ / 30 minutes",

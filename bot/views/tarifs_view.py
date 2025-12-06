@@ -20,12 +20,12 @@ class TarifsModal(Modal, title="Simulation de tarif"):
 
         t = max(1, math.ceil(minutes / 30))
 
-        base = 20000
+        #base = 20000
         rate_min = 10000
         rate_max = 15000
 
-        low = base + ((nb_agents * rate_min) * t) * 1.3
-        high = base + ((nb_agents * rate_max) * t) * 1.3
+        low = ((nb_agents * rate_min) * t) * 1.3
+        high = ((nb_agents * rate_max) * t) * 1.3
 
         def round_up_thousand(n):
             return int(math.ceil(n / 1000.0) * 1000)
@@ -36,6 +36,6 @@ class TarifsModal(Modal, title="Simulation de tarif"):
         await interaction.response.send_message(
             f"💸 Estimation pour {nb_agents} agent(s) pendant {minutes} minutes :\n"
             f"• Fourchette : {low_r:,} — {high_r:,} $\n"
-            f"(basée sur {rate_min:,}$/30min à {rate_max:,}$/30min + frais fixes de {base:,} et majoration x1.3)",
+            f"(basée sur {rate_min:,}$/30min à {rate_max:,}$/30min et majoration x1.3)",
             ephemeral=True
         )
