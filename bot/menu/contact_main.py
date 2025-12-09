@@ -25,17 +25,14 @@ class MainMenuSelect(Select):
         choice = self.values[0]
 
         if choice == "partnership":
-            # créer modal / ouvrir modal de partenariat
             await interaction.response.send_modal(PartnershipModal())
             return
 
         elif choice == "other":
-            # créer un ticket classique
             await create_ticket_channel(interaction)
             return
 
         elif choice == "contact_agent":
-            # afficher le menu de contact agents
             await send_contact_menu(interaction)
             return
 
