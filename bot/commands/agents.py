@@ -92,6 +92,20 @@ class AgentsManager:
         ag["permits"] = permits
         self.save()
 
+    def increment_missions(self, user_id: str):
+        """Augmente le compteur de missions complétées"""
+        user_id = str(user_id)
+        ag = self.ensure_agent(user_id)
+        ag["missions_done"] = ag.get("missions_done", 0) + 1
+        self.save()
+
+    def increment_absence(self, user_id: str):
+        """Augmente le compteur d'absences"""
+        user_id = str(user_id)
+        ag = self.ensure_agent(user_id)
+        ag["absences"] = ag.get("absences", 0) + 1
+        self.save()
+
     async def build_embed(self):
         emb = discord.Embed(title="📋 Liste des agents", color=discord.Color.blurple())
         if not self.agents:

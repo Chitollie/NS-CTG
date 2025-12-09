@@ -177,6 +177,11 @@ class MissionParticipationView(View):
         except Exception:
             pass
 
+    # AJOUT: Méthode pour la fin de mission
+    async def end_mission_view(self):
+        """Remplace les boutons par MissionEndingView"""
+        return MissionEndingView(self.mission_data, self.msg_id)
+
 class MissionTrackingView(View):
     def __init__(self, mission_data: Dict[str, Any], msg_id: int):
         super().__init__(timeout=None)
