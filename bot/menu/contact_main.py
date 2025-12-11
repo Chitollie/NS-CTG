@@ -31,17 +31,14 @@ class MainMenuSelect(Select):
         choice = self.values[0]
 
         if choice == "partnership":
-            # créer modal / ouvrir modal de partenariat
             await interaction.response.send_modal(PartnershipModal())
             return
 
         elif choice == "other":
-            # créer un ticket classique
             await create_ticket_channel(interaction)
             return
 
         elif choice == "contact_agent":
-            # afficher le menu de contact agents
             await send_contact_menu(interaction)
             return
 
@@ -66,7 +63,6 @@ async def deploy_contact_main(bot: commands.Bot):
 # ----------------- SETUP -----------------
 async def setup(bot: commands.Bot):
     try:
-        # Enregistrer la View pour que les callbacks persistent après un redémarrage
         bot.add_view(MainMenuView())
     except Exception as e:
         print(f"⚠️ Erreur enregistrement MainMenuView: {e}")
