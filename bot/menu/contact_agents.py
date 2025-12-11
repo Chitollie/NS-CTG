@@ -10,7 +10,7 @@ TICKETS_CATEGORY_ID = int(os.getenv("TICKETS_CATEGORY_ID", 0))
 AGENTS = {
     "Alina Wolf": {"role": "PDG", "numero": "59669-70941", "discord_id": 725425681177247908},
     "Brian Stanford": {"role": "Co-PDG", "numero": "59783-70510", "discord_id": 1263956791818195087},
-    "Brice Roca": {"role": "Directeur", "numero": "59158-69882", "discord_id": 471721415574290432},
+    #"Brice Roca": {"role": "Directeur", "numero": "59158-69882", "discord_id": 471721415574290432},
 }
 
 
@@ -62,4 +62,8 @@ class MenuView(View):
         self.add_item(MenuSelect())
 
 async def send_contact_menu(interaction: discord.Interaction):
-    await interaction.response.send_message("📞 Choisis une personne à contacter :", view=MenuView(), ephemeral=True)
+    await interaction.response.send_message(
+        "📞 Choisis une personne à contacter :",
+        view=MenuView(),
+        ephemeral=True
+    )

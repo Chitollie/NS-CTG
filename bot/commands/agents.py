@@ -9,6 +9,11 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 DATA_PATH = os.path.normpath(os.path.join(DATA_DIR, "agents.json"))
 
+RANKS = ["Recrue", "Agent", "Agent Supérieur", "Responsable", "Chef d'unité", "Consultant", "Manager", "Directeur"]
+PERMITS = ["PPA", "PPAL"]
+ACTIONS_RANK = ["up", "down"]
+ACTIONS_PERMITS = ["add", "remove"]
+
 class AgentsManager:
     def __init__(self):
         self.agents: Dict[str, Dict[str, Any]] = {}
@@ -16,10 +21,10 @@ class AgentsManager:
         self._ensure_data_dir()
         self.load()
 
-    def get_default(self, user_id: str, name: str = None):
+    def get_default(self, user_id: str, name: str):
         return {
             "id": user_id,
-            "name": name or f"<@{user_id}>",
+            "name": name,
             "rank": "Recrue",
             "absences": 0,
             "specialty": None,
@@ -55,7 +60,7 @@ class AgentsManager:
         if not os.path.exists(DATA_DIR):
             os.makedirs(DATA_DIR, exist_ok=True)
 
-    def ensure_agent(self, user_id: str, name: str = None):
+    def ensure_agent(self, user_id: str, name: str):
         user_id = str(user_id)
         if user_id not in self.agents:
             self.agents[user_id] = self.get_default(user_id, name)
@@ -64,46 +69,28 @@ class AgentsManager:
 
     def rank_up(self, user_id: str, new_rank: str):
         user_id = str(user_id)
-        ag = self.ensure_agent(user_id)
+        ag = self.ensure_agent(user_id, new_rank)
         ag["rank"] = new_rank
         self.save()
 
     def set_specialty(self, user_id: str, specialty: str = None):
         user_id = str(user_id)
-        ag = self.ensure_agent(user_id)
+        ag = self.ensure_agent(user_id, specialty or "")
         ag["specialty"] = specialty
         self.save()
 
     def add_permit(self, user_id: str, permit: str):
         user_id = str(user_id)
-        ag = self.ensure_agent(user_id)
-        permits = ag.get("permits", [])
-        if permit not in permits:
-            permits.append(permit)
-        ag["permits"] = permits
+        ag = self.ensure_agent(user_id, permit)
+        if permit not in ag.get("permits", []):
+            ag["permits"].append(permit)
         self.save()
 
     def remove_permit(self, user_id: str, permit: str):
         user_id = str(user_id)
-        ag = self.ensure_agent(user_id)
-        permits = ag.get("permits", [])
-        if permit in permits:
-            permits.remove(permit)
-        ag["permits"] = permits
-        self.save()
-
-    def increment_missions(self, user_id: str):
-        """Augmente le compteur de missions complétées"""
-        user_id = str(user_id)
-        ag = self.ensure_agent(user_id)
-        ag["missions_done"] = ag.get("missions_done", 0) + 1
-        self.save()
-
-    def increment_absence(self, user_id: str):
-        """Augmente le compteur d'absences"""
-        user_id = str(user_id)
-        ag = self.ensure_agent(user_id)
-        ag["absences"] = ag.get("absences", 0) + 1
+        ag = self.ensure_agent(user_id, permit)
+        if permit in ag.get("permits", []):
+            ag["permits"].remove(permit)
         self.save()
 
     async def build_embed(self):
@@ -111,8 +98,8 @@ class AgentsManager:
         if not self.agents:
             emb.description = "Aucun agent enregistré"
             return emb
-        for uid, data in sorted(self.agents.items(), key=lambda kv: kv[1].get("rank", "")):
-            name = data.get("name", f"<@{uid}>")
+        for uid, data in sorted(self.agents.items(), key=lambda kv: RANKS.index(kv[1].get("rank", "Recrue")) if kv[1].get("rank") in RANKS else 0):
+            name = data.get("name", "Inconnu")
             rank = data.get("rank", "N/A")
             missions_done = data.get("missions_done", 0)
             absences = data.get("absences", 0)
@@ -124,7 +111,7 @@ class AgentsManager:
         return emb
 
     async def build_agent_profile(self, user_id: str):
-        ag = self.ensure_agent(user_id)
+        ag = self.ensure_agent(user_id, "Inconnu")
         emb = discord.Embed(title=f"📋 Profil de {ag.get('name')}", color=discord.Color.blurple())
         emb.add_field(name="Rang", value=ag.get("rank", "Recrue"), inline=True)
         emb.add_field(name="Missions", value=ag.get("missions_done", 0), inline=True)
@@ -175,68 +162,70 @@ class AgentsCog(commands.Cog):
     async def on_ready(self):
         await agents_manager.restore_embed(self.bot)
 
-    @app_commands.command(
-        name="agent",
-        description="Gérer un agent"
-    )
+    @app_commands.command(name="agent", description="Gérer un agent")
     @app_commands.describe(
         user="Utilisateur à gérer",
         type="Type de gestion",
-        action="Action (pour rank ou permits)",
-        value="Valeur à appliquer (nouveau rang, specialty, permis)"
+        action="Action à effectuer (pour rank et permits)",
+        value="Valeur à appliquer (nouveau grade, specialty ou permis)"
     )
     @app_commands.choices(type=[
-        app_commands.Choice(name="rank", value="rank"),
-        app_commands.Choice(name="specialty", value="specialty"),
-        app_commands.Choice(name="permits", value="permits"),
-        app_commands.Choice(name="profile", value="profile")
+        app_commands.Choice(name="Profile", value="profile"),
+        app_commands.Choice(name="Rang", value="rank"),
+        app_commands.Choice(name="Spécialité", value="specialty"),
+        app_commands.Choice(name="Permis", value="permits")
+    ])
+    @app_commands.choices(action=[
+        app_commands.Choice(name="up", value="up"),
+        app_commands.Choice(name="down", value="down"),
+        app_commands.Choice(name="add", value="add"),
+        app_commands.Choice(name="remove", value="remove")
+    ])
+    @app_commands.choices(value=[
+        *[app_commands.Choice(name=rank, value=rank) for rank in RANKS],
+        *[app_commands.Choice(name=permit, value=permit) for permit in PERMITS]
     ])
     async def agent(self, interaction: Interaction, user: User, type: app_commands.Choice[str], action: str = None, value: str = None):
         uid = str(user.id)
+        user_name = user.display_name
+        agents_manager.ensure_agent(uid, name=user_name)
 
         if type.value == "profile":
             emb = await agents_manager.build_agent_profile(uid)
-            await interaction.response.send_message(embed=emb)
+            await interaction.response.send_message(embed=emb, ephemeral=True)
             return
 
         if type.value == "rank":
-            if action not in ["up", "down"]:
-                return await interaction.response.send_message("❌ Action invalide (up/down).", ephemeral=True)
-            new_rank = value or "Recrue"
-            agents_manager.rank_up(uid, new_rank)
+            if value not in RANKS:
+                return await interaction.response.send_message(f"❌ Rang invalide. Choisissez parmi : {', '.join(RANKS)}", ephemeral=True)
+            agents_manager.rank_up(uid, value)
             await agents_manager.restore_embed(self.bot)
-            await interaction.response.send_message(f"✅ Rang de {user.mention} → {new_rank}")
+            await interaction.response.send_message(f"✅ Rang de **{user_name}** → **{value}**", ephemeral=True)
 
         elif type.value == "specialty":
+            if not value:
+                return await interaction.response.send_message("❌ Spécialité manquante.", ephemeral=True)
             agents_manager.set_specialty(uid, value)
             await agents_manager.restore_embed(self.bot)
-            await interaction.response.send_message(f"✅ Spécialité mise à jour : {value or 'Aucune'}")
+            await interaction.response.send_message(f"✅ Spécialité de **{user_name}** mise à jour : {value}", ephemeral=True)
 
         elif type.value == "permits":
-            if action not in ["add", "remove"]:
-                return await interaction.response.send_message("❌ Action invalide (add/remove).", ephemeral=True)
+            if action not in ACTIONS_PERMITS:
+                return await interaction.response.send_message(f"❌ Action invalide. Choisissez : {', '.join(ACTIONS_PERMITS)}", ephemeral=True)
+            if value not in PERMITS:
+                return await interaction.response.send_message(f"❌ Permis invalide. Choisissez : {', '.join(PERMITS)}", ephemeral=True)
+
             if action == "add":
                 agents_manager.add_permit(uid, value)
-                msg = f"✅ Permis {value} ajouté"
+                msg = f"✅ Permis {value} ajouté à **{user_name}**"
             else:
                 agents_manager.remove_permit(uid, value)
-                msg = f"🚫 Permis {value} retiré"
+                msg = f"🚫 Permis {value} retiré de **{user_name}**"
+
             await agents_manager.restore_embed(self.bot)
-            await interaction.response.send_message(f"{msg} à {user.mention}")
+            await interaction.response.send_message(msg, ephemeral=True)
 
 
 async def setup(bot: commands.Bot):
     cog = AgentsCog(bot)
     await bot.add_cog(cog)
-
-    bot.tree.add_command(cog.agent)
-    try:
-        from bot.config import GUILD_ID
-        if GUILD_ID:
-            guild = discord.Object(id=GUILD_ID)
-            bot.tree.copy_global_to(guild=guild)
-            await bot.tree.sync(guild=guild)
-        else:
-            await bot.tree.sync()
-    except Exception as e:
-        print(f"[Slash Sync Error] {e}")

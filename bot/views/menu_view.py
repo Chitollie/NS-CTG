@@ -14,7 +14,7 @@ class MenuSelect(Select):
             discord.SelectOption(label="Contacter un consultant",
                                  description="Être mis en relation"),
         ]
-        super().__init__(placeholder="Choisis une option...", options=options)
+        super().__init__(placeholder="Choisis une option...", options=options, ephemeral=True)
 
     async def callback(self, interaction: discord.Interaction):
         if self.values[0] == "Simulation tarifaire":

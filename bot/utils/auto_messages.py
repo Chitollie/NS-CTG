@@ -3,9 +3,8 @@ from typing import Optional
 import json
 from pathlib import Path
 
-STORAGE_PATH = Path(__file__).resolve().parents[2] / "data" / "auto_messages.json"
-STORAGE_PATH.parent.mkdir(parents=True, exist_ok=True)
-
+BASE_DIR = Path(__file__).resolve().parents[1]
+STORAGE_PATH = BASE_DIR / "data" / "auto_messages.json"
 
 def _load_store() -> dict:
     try:

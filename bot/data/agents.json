@@ -1,4 +1,64 @@
 {
-  "agents": {},
-  "embed_msg_id": null
+  "agents": {
+    "1263956791818195087": {
+      "id": "1263956791818195087",
+      "name": "<@1263956791818195087>",
+      "rank": "Co-PDG",
+      "absences": 0,
+      "specialty": "Formateur",
+      "permits": [
+        "PPA",
+        "PPAL"
+      ],
+      "missions_done": 0
+    },
+    "1156268413837123774": {
+      "id": "1156268413837123774",
+      "name": "<@1156268413837123774>",
+      "rank": "Recrue",
+      "absences": 0,
+      "specialty": null,
+      "permits": [],
+      "missions_done": 0
+    },
+    "1017039390012350494": {
+      "id": "1017039390012350494",
+      "name": "<@1017039390012350494>",
+      "rank": "Recrue",
+      "absences": 0,
+      "specialty": null,
+      "permits": [
+        "PPA"
+      ],
+      "missions_done": 0
+    },
+    "949621893785341982": {
+      "id": "949621893785341982",
+      "name": "<@949621893785341982>",
+      "rank": "Recrue",
+      "absences": 0,
+      "specialty": null,
+      "permits": [],
+      "missions_done": 0
+    },
+    "697204271048949790": {
+      "id": "697204271048949790",
+      "name": "<@697204271048949790>",
+      "rank": "Recrue",
+      "absences": 0,
+      "specialty": null,
+      "permits": [],
+      "missions_done": 0
+    },
+    "524718167075848202": {
+      "id": "524718167075848202",
+      "name": "Wassim Elios | 137",
+      "rank": "Consultant",
+      "absences": 0,
+      "specialty": null,
+      "permits": [],
+      "missions_done": 0
+    }
+  },
+  "embed_msg_id": 1446819483959296063
 }
