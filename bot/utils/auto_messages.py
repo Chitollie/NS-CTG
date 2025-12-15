@@ -32,12 +32,8 @@ async def clean_and_send(
     embed: Optional[discord.Embed] = None,
     view: Optional[discord.ui.View] = None,
     bot_filter: str = None
-) -> Optional[discord.Message]:
+)   -> Optional[discord.Message]:
 
-    """
-    Met à jour le dernier message envoyé par le bot dans le canal s’il existe,
-    sinon envoie un nouveau message.
-    """
 
     bot_id = None
     try:
