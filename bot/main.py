@@ -1,3 +1,4 @@
+import os
 import discord
 from discord.ext import commands
 from bot.config import TOKEN, GUILD_ID
@@ -6,6 +7,7 @@ import importlib
 import inspect
 import pkgutil
 
+TOKEN = os.getenv("TOKEN")
 
 intents = discord.Intents.all()
 
