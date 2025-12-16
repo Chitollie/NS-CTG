@@ -16,7 +16,6 @@ def get_env_int(var_name: str, default: int | None = None) -> int:
         raise ValueError(f"{var_name} doit être un entier, reçu: {value}")
 
 def get_env_list(var_name: str) -> list[int]:
-    """Renvoie une liste d'entiers depuis une variable .env séparée par des virgules"""
     value = os.getenv(var_name)
     if not value:
         return []

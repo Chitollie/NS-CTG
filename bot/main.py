@@ -6,7 +6,9 @@ from bot.utils import missions_data
 import importlib
 import inspect
 import pkgutil
+from dotenv import load_dotenv
 
+load_dotenv()
 TOKEN = os.getenv("TOKEN")
 
 intents = discord.Intents.all()
@@ -150,11 +152,6 @@ def register_persistent_views(bot):
 #                     L A U N C H   B O T
 # ============================================================
 
-async def main():
-    async with bot:
-        await bot.start(TOKEN)
-
-
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    bot.run(TOKEN)
+
