@@ -1,13 +1,25 @@
-name: Deploy via Pterodactyl API
+name: Deploy to Pterodactyl
 on:
   push:
     branches:
       - main
 
 jobs:
-  restart:
+  deploy:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Upload files to Pterodactyl
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.PTERO_HOST }}
+          username: ${{ secrets.PTERO_USER }}
+          password: ${{ secrets.PTERO_PASS }}
+          source: "./*"
+          target: "/home/container"
+
       - name: Restart server via API
         run: |
           curl -X POST "${{ secrets.PTERO_HOST }}/api/client/servers/${{ secrets.PTERO_SERVER_ID }}/power" \
