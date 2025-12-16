@@ -43,9 +43,11 @@ async def setup_hook():
         await bot.add_cog(admin.AdminCog(bot))
         await bot.add_cog(annonces.AnnoncesCog(bot))
         await bot.add_cog(menu.MenuCog(bot))
+        await events.setup_events(bot)
 
         from bot.commands.agents import setup as setup_agents
         await setup_agents(bot)
+        await events.setup_events(bot)
 
         print("✅ Commandes chargées")
     except Exception as e:
