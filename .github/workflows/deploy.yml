@@ -14,9 +14,9 @@ jobs:
       - name: Upload files to VPS (Pterodactyl server folder)
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.PTERO_SSH_HOST }}        # IP du VPS
-          username: ${{ secrets.PTERO_SSH_USER }}    # root ou autre
-          password: ${{ secrets.PTERO_SSH_PASS }}
+          host: ${{ secrets.PTERO_SSH_HOST }}
+          username: ${{ secrets.PTERO_USER }}
+          password: ${{ secrets.PTERO_PASS }}
           source: "./*"
           target: "/var/lib/pterodactyl/volumes/03971a82-0157-4b60-9b87-fdd409880310"
 
