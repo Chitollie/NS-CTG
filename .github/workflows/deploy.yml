@@ -17,9 +17,9 @@ jobs:
       - name: Upload files to VPS (Pterodactyl server folder)
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.PTERO_SSH_HOST }}         # IP du VPS
-          username: ${{ secrets.PTERO_USER }}         # root ou autre
-          password: ${{ secrets.PTERO_PASS }}         # mot de passe SSH
+          host: ${{ secrets.PTERO_SSH_HOST }}
+          username: ${{ secrets.PTERO_USER }}
+          password: ${{ secrets.PTERO_PASS }}
           port: 22
           source: "./*"
           target: "/var/lib/pterodactyl/volumes/03971a82-0157-4b60-9b87-fdd409880310"
@@ -32,6 +32,11 @@ jobs:
           sudo apt-get install -y sshpass
           sshpass -p "${{ secrets.PTERO_PASS }}" ssh -o StrictHostKeyChecking=no ${{ secrets.PTERO_USER }}@${{ secrets.PTERO_SSH_HOST }} \
           "chown -R pterodactyl:pterodactyl /var/lib/pterodactyl/volumes/03971a82-0157-4b60-9b87-fdd409880310"
+
+      - name: Install Python dependencies
+        run: |
+          sshpass -p "${{ secrets.PTERO_PASS }}" ssh -o StrictHostKeyChecking=no ${{ secrets.PTERO_USER }}@${{ secrets.PTERO_SSH_HOST }} \
+          "cd /var/lib/pterodactyl/volumes/03971a82-0157-4b60-9b87-fdd409880310 && pip install -r requirements.txt"
 
       - name: Restart Pterodactyl server via API
         run: |
