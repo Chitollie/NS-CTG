@@ -11,18 +11,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Upload files to Pterodactyl
+      - name: Upload files to VPS (Pterodactyl server folder)
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.PTERO_HOST }}
-          username: ${{ secrets.PTERO_USER }}
-          password: ${{ secrets.PTERO_PASS }}
+          host: ${{ secrets.PTERO_SSH_HOST }}        # IP du VPS
+          username: ${{ secrets.PTERO_SSH_USER }}    # root ou autre
+          password: ${{ secrets.PTERO_SSH_PASS }}
           source: "./*"
-          target: "/home/container"
+          target: "/var/lib/pterodactyl/volumes/03971a82-0157-4b60-9b87-fdd409880310"
 
-      - name: Restart server via API
+      - name: Restart Pterodactyl server via API
         run: |
-          curl -X POST "${{ secrets.PTERO_HOST }}/api/client/servers/${{ secrets.PTERO_SERVER_ID }}/power" \
+          curl -X POST "${{ secrets.PTERO_PANEL_URL }}/api/client/servers/${{ secrets.PTERO_SERVER_ID }}/power" \
           -H "Authorization: Bearer ${{ secrets.PTERO_API_KEY }}" \
           -H "Content-Type: application/json" \
           -d '{"signal": "restart"}'
