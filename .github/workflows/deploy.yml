@@ -1,12 +1,15 @@
 name: Deploy to Pterodactyl
+
 on:
   push:
     branches:
       - main
+  workflow_dispatch: # Permet de lancer manuellement depuis GitHub
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -14,11 +17,15 @@ jobs:
       - name: Upload files to VPS (Pterodactyl server folder)
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.PTERO_SSH_HOST }}
-          username: ${{ secrets.PTERO_USER }}
-          password: ${{ secrets.PTERO_PASS }}
-          source: "./*"
+          host: ${{ secrets.PTERO_SSH_HOST }}         # IP ou domaine du VPS
+          username: ${{ secrets.PTERO_USER }}         # root ou autre utilisateur SSH
+          password: ${{ secrets.PTERO_PASS }}         # mot de passe SSH
+          port: 22
+          source: "./*"                               # fichiers à envoyer
           target: "/var/lib/pterodactyl/volumes/03971a82-0157-4b60-9b87-fdd409880310"
+          rm: true                                     # supprime les fichiers distants avant copie (optionnel)
+          strip_components: 1                          # évite de recréer des sous-dossiers (optionnel)
+          overwrite: true                              # écrase les fichiers existants
 
       - name: Restart Pterodactyl server via API
         run: |
