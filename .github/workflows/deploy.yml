@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch: # Permet de lancer manuellement depuis GitHub
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -17,15 +17,21 @@ jobs:
       - name: Upload files to VPS (Pterodactyl server folder)
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.PTERO_SSH_HOST }}         # IP ou domaine du VPS
-          username: ${{ secrets.PTERO_USER }}         # root ou autre utilisateur SSH
+          host: ${{ secrets.PTERO_SSH_HOST }}         # IP du VPS
+          username: ${{ secrets.PTERO_USER }}         # root ou autre
           password: ${{ secrets.PTERO_PASS }}         # mot de passe SSH
           port: 22
-          source: "./*"                               # fichiers à envoyer
+          source: "./*"
           target: "/var/lib/pterodactyl/volumes/03971a82-0157-4b60-9b87-fdd409880310"
-          rm: true                                     # supprime les fichiers distants avant copie (optionnel)
-          strip_components: 1                          # évite de recréer des sous-dossiers (optionnel)
-          overwrite: true                              # écrase les fichiers existants
+          overwrite: true
+          rm: false
+
+      - name: Fix file ownership (pterodactyl:pterodactyl)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y sshpass
+          sshpass -p "${{ secrets.PTERO_PASS }}" ssh -o StrictHostKeyChecking=no ${{ secrets.PTERO_USER }}@${{ secrets.PTERO_SSH_HOST }} \
+          "chown -R pterodactyl:pterodactyl /var/lib/pterodactyl/volumes/03971a82-0157-4b60-9b87-fdd409880310"
 
       - name: Restart Pterodactyl server via API
         run: |
