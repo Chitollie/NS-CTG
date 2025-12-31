@@ -20,7 +20,7 @@ class TarifsModal(Modal, title="Simulation de tarif"):
 
         t = max(1, math.ceil(minutes / 30))
 
-        base_rate = 10000  # Prix fixe par tranche de 30 min par agent
+        base_rate = 10000
         t = max(1, math.ceil(minutes / 30))
         total = t * nb_agents * base_rate
 
